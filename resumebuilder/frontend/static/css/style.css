@@ -1,0 +1,67 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f9f9f9;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background: #222;
+    color: #fff;
+    padding: 1rem;
+}
+
+main {
+    padding: 2rem;
+}
+
+form {
+    max-width: 400px;
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 6px;
+}
+
+label {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+input {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 0.25rem;
+}
+.resume {
+    max-width: 800px;
+    background: #fff;
+    padding: 2rem;
+    margin: auto;
+    color: #000;
+}
+
+.resume h2 {
+    margin-bottom: 0.25rem;
+}
+
+.resume hr {
+    margin: 1.5rem 0;
+}
+
+@media print {
+    body {
+        background: #fff;
+    }
+
+    header,
+    a,
+    button {
+        display: none;
+    }
+
+    .resume {
+        box-shadow: none;
+        margin: 0;
+        padding: 0;
+    }
+}

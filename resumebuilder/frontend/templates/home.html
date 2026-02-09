@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Home | ResumeBuilder{% endblock %}
+
+{% block content %}
+<h2>Create your resume</h2>
+
+<form method="post" action="/resume">
+    <label>
+        Name:
+        <input type="text" name="name" required>
+    </label>
+
+    <label>
+        Email:
+        <input type="email" name="email" required>
+    </label>
+
+    <button type="submit">Preview Resume</button>
+</form>
+{% endblock %}
