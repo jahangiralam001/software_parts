@@ -3,19 +3,308 @@
 {% block title %}Home | ResumeBuilder{% endblock %}
 
 {% block content %}
-<h2>Create your resume</h2>
+<div>
+    <div class="toolbar" style="margin-bottom:18px;display:flex;justify-content:flex-start;gap:12px;align-items:center">
+        <form id="toolbar-save" method="post" action="/resume/save" style="display:inline">
+            {% if id %}
+            <input type="hidden" name="id" value="{{ id }}">
+            {% endif %}
+            <button id="toolbar-preview" type="button">Preview Resume</button>
+            <!-- Save will submit the hidden #editor form so all hidden inputs are included -->
+            <button id="toolbar-save-btn" type="button">Save</button>
+        </form>
+        <a href="/resumes">My Resumes</a>
+    </div>
 
-<form method="post" action="/resume">
-    <label>
-        Name:
-        <input type="text" name="name" required>
-    </label>
+    <!-- Hidden form used for save/preview; kept in DOM but not shown -->
+    <form id="editor" method="post" action="/resume/save" style="display:none">
+        {% if id %}
+        <input type="hidden" name="id" id="input-id" value="{{ id }}">
+        {% endif %}
+        <input type="hidden" name="name" id="input-name" value="{{ name or '' }}">
+        <input type="hidden" name="email" id="input-email" value="{{ email or '' }}">
+        <input type="hidden" name="summary" id="input-summary" value="{{ summary or 'A short professional summary goes here. You can edit this in the form to the left.' }}">
+        <input type="hidden" name="edu_title" id="input-edu-title" value="{{ edu_title or 'B.Sc in Computer Science' }}">
+        <input type="hidden" name="edu_period" id="input-edu-period" value="{{ edu_period or 'University Name — 2020 - 2024' }}">
+        <input type="hidden" name="edu_desc" id="input-edu-desc" value="Short description of notable achievements or final project.">
+        <input type="hidden" name="exp_title" id="input-exp-title" value="{{ exp_title or 'Sr. Sales & IT Executive — TCL Global' }}">
+        <input type="hidden" name="exp_period" id="input-exp-period" value="{{ exp_period or '02/2025 - Present' }}">
+        <input type="hidden" name="exp_desc" id="input-exp-desc" value="Describe responsibilities and accomplishments here.">
+        <input type="hidden" name="location" id="input-location" value="City, Country">
+        <input type="hidden" name="website" id="input-website" value="portfolio.example.com">
+        <input type="hidden" name="soft_skills" id="input-soft-skills" value="Communication, Teamwork, Problem Solving">
+        <input type="hidden" name="skills" id="input-skills" value="{{ skills or 'Python, JavaScript, SQL' }}">
+    </form>
 
-    <label>
-        Email:
-        <input type="email" name="email" required>
-    </label>
+    <div style="flex:1">
+        <!-- Inline live preview uses same markup as resume_preview.html -->
+        <div id="live-preview" class="resume-preview">
+            <div class="resume-header">
+                <div class="meta">
+                    <div>
+                        <h2 id="preview-name" class="resume-name" data-field="name">{{ name or 'Your Name' }}</h2>
+                        <p id="preview-summary" class="resume-summary" data-field="summary">{{ summary or 'A short professional summary goes here. You can edit this in the form to the left.' }}</p>
+                    </div>
+                    <div class="avatar" aria-hidden="true"></div>
+                </div>
+            </div>
 
-    <button type="submit">Preview Resume</button>
-</form>
+            <div class="contact-bar">
+                <div class="contact-item">
+                    <span id="preview-email" class="contact-text" data-field="email">✉️ {{ email or 'email@example.com' }}</span>
+                </div>
+                <div class="contact-item">
+                    <span id="preview-location" class="contact-text" data-field="location">📍 City, Country</span>
+                </div>
+                <div class="contact-item">
+                    <span id="preview-website" class="contact-text" data-field="website">🔗 portfolio.example.com</span>
+                </div>
+            </div>
+
+            <div class="resume-body">
+                <div class="col-left">
+                    <div class="section">
+                        <h3>Education</h3>
+                        <div>
+                            <div id="preview-edu-title" class="item-title" data-field="edu_title">{{ edu_title or 'B.Sc in Computer Science' }}</div>
+                            <div id="preview-edu-period" class="muted" data-field="edu_period">{{ edu_period or 'University Name — 2020 - 2024' }}</div>
+                            <p id="preview-edu-desc" data-field="edu_desc">Short description of notable achievements or final project.</p>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>Work experience</h3>
+                        <div>
+                            <div id="preview-exp-title" class="item-title" data-field="exp_title">{{ exp_title or 'Sr. Sales & IT Executive — TCL Global' }}</div>
+                            <div id="preview-exp-period" class="muted" data-field="exp_period">{{ exp_period or '02/2025 - Present' }}</div>
+                            <p id="preview-exp-desc" data-field="exp_desc">Describe responsibilities and accomplishments here.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="col-right">
+                    <div class="section">
+                        <h3>Skills Inventory</h3>
+                        <ul id="preview-skills-list" data-field="skills">
+                            {% for s in (skills or 'Python, JavaScript, SQL').split(',') %}
+                                <li>{{ s.strip() }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h3>Soft Skills</h3>
+                        <p id="preview-soft-skills" data-field="soft_skills">Communication, Teamwork, Problem Solving</p>
+                    </div>
+                </aside>
+            </div>
+
+            <div style="padding:18px;border-top:1px solid #eef4f6; display:flex;gap:12px;align-items:center">
+                <form method="post" action="/resume/pdf">
+                    <input type="hidden" name="name" id="pdf-name">
+                    <input type="hidden" name="email" id="pdf-email">
+                    <button type="submit">Download PDF</button>
+                </form>
+
+                <a id="edit-link" href="/">← Edit</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    // hidden inputs + preview elements
+    const inputs = {
+        name: document.getElementById('input-name'),
+        email: document.getElementById('input-email'),
+        summary: document.getElementById('input-summary'),
+        eduTitle: document.getElementById('input-edu-title'),
+        eduPeriod: document.getElementById('input-edu-period'),
+        eduDesc: document.getElementById('input-edu-desc'),
+        expTitle: document.getElementById('input-exp-title'),
+        expPeriod: document.getElementById('input-exp-period'),
+        expDesc: document.getElementById('input-exp-desc'),
+        location: document.getElementById('input-location'),
+        website: document.getElementById('input-website'),
+        softSkills: document.getElementById('input-soft-skills'),
+        skills: document.getElementById('input-skills')
+    };
+
+    const preview = {
+        name: document.getElementById('preview-name'),
+        email: document.getElementById('preview-email'),
+        summary: document.getElementById('preview-summary'),
+        eduTitle: document.getElementById('preview-edu-title'),
+        eduPeriod: document.getElementById('preview-edu-period'),
+        eduDesc: document.getElementById('preview-edu-desc'),
+        expTitle: document.getElementById('preview-exp-title'),
+        expPeriod: document.getElementById('preview-exp-period'),
+        expDesc: document.getElementById('preview-exp-desc'),
+        location: document.getElementById('preview-location'),
+        website: document.getElementById('preview-website'),
+        softSkills: document.getElementById('preview-soft-skills'),
+        skillsList: document.getElementById('preview-skills-list'),
+        pdfName: document.getElementById('pdf-name'),
+        pdfEmail: document.getElementById('pdf-email')
+    };
+
+    function updateSkills() {
+        const val = inputs.skills.value || '';
+        const parts = val.split(',').map(s=>s.trim()).filter(Boolean);
+        preview.skillsList.innerHTML = '';
+        parts.forEach(p=>{
+            const li = document.createElement('li'); li.textContent = p; preview.skillsList.appendChild(li);
+            attachSkillHandlers(li);
+        });
+    }
+
+    function attachSkillHandlers(li){
+        if(!li) return;
+        li.style.cursor = 'text';
+        li.addEventListener('click', function(e){
+            if(li.isContentEditable) return;
+            makeEditable(li);
+            e.stopPropagation();
+        });
+        li.addEventListener('blur', function(){
+            // after editing an li, rebuild skills list
+            setTimeout(()=>{
+                const skills = Array.from(preview.skillsList.querySelectorAll('li')).map(x=>x.textContent.trim()).filter(Boolean);
+                inputs.skills.value = skills.join(', ');
+                sync();
+            }, 10);
+        });
+        li.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); li.blur(); } });
+    }
+
+    function sync() {
+        // ensure hidden inputs reflect preview content (useful on init)
+        if(preview.name) inputs.name.value = preview.name.textContent.trim();
+        if(preview.email) inputs.email.value = preview.email.textContent.replace(/^✉️\s*/, '').trim();
+        if(preview.summary) inputs.summary.value = preview.summary.textContent.trim();
+        if(preview.eduTitle) inputs.eduTitle.value = preview.eduTitle.textContent.trim();
+        if(preview.eduPeriod) inputs.eduPeriod.value = preview.eduPeriod.textContent.trim();
+        if(preview.eduDesc) inputs.eduDesc.value = preview.eduDesc.textContent.trim();
+        if(preview.expTitle) inputs.expTitle.value = preview.expTitle.textContent.trim();
+        if(preview.expPeriod) inputs.expPeriod.value = preview.expPeriod.textContent.trim();
+        if(preview.expDesc) inputs.expDesc.value = preview.expDesc.textContent.trim();
+        // rebuild skills csv from list
+        const skills = Array.from(preview.skillsList.querySelectorAll('li')).map(li=>li.textContent.trim()).filter(Boolean);
+        inputs.skills.value = skills.join(', ');
+        // set PDF hidden fields
+        if(preview.pdfName) preview.pdfName.value = inputs.name.value || '';
+        if(preview.pdfEmail) preview.pdfEmail.value = inputs.email.value || '';
+    }
+
+    // initial sync from preview into hidden inputs
+    sync();
+
+    // Preview button opens server-rendered preview in a new tab
+    const previewBtn = document.getElementById('toolbar-preview');
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function(){
+        // sync hidden inputs first
+        sync();
+        const form = document.createElement('form');
+        form.method = 'POST'; form.action = '/resume/preview'; form.target = '_blank';
+        ['name','email','summary','edu_title','edu_period','edu_desc','exp_title','exp_period','exp_desc','skills'].forEach(name=>{
+            const el = document.getElementById('input-' + name.replace(/_/g,'-'));
+            const v = el ? el.value : '';
+            const inp = document.createElement('input'); inp.type='hidden'; inp.name=name; inp.value=v; form.appendChild(inp);
+        });
+            document.body.appendChild(form); form.submit(); form.remove();
+        });
+    }
+
+    // toolbar Save: submit the hidden #editor form after syncing preview -> inputs
+    const toolbarSaveBtn = document.getElementById('toolbar-save-btn');
+    if (toolbarSaveBtn) {
+        toolbarSaveBtn.addEventListener('click', function(e){
+            // populate hidden inputs
+            sync();
+            const editorForm = document.getElementById('editor');
+            if(editorForm){
+                editorForm.submit();
+            }
+        });
+    }
+
+    // In-place editing: click any preview element with data-field to edit
+    function makeEditable(el){
+        if(!el) return;
+        el.setAttribute('contenteditable','true');
+        el.classList.add('editing');
+        // move caret to end
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+        el.focus();
+    }
+
+    function finishEdit(el){
+        if(!el) return;
+        el.removeAttribute('contenteditable');
+        el.classList.remove('editing');
+        const field = el.dataset.field;
+        if(!field) return;
+        const val = el.textContent.trim();
+        // map field to input id: input-<field> (replace _ with -)
+        const inputId = 'input-' + field.replace(/_/g,'-');
+        const input = document.getElementById(inputId) || document.querySelector('[name="'+field+'"]');
+        if(field === 'skills'){
+            // parse list items
+            const items = Array.from(el.querySelectorAll('li')).map(li=>li.textContent.trim()).filter(Boolean);
+            const csv = items.length ? items.join(', ') : val;
+            if(input) input.value = csv;
+            // refresh skills list from input
+            inputs.skills.value = csv;
+            updateSkills();
+        } else {
+            if(input) input.value = val;
+            // trigger sync for that specific field
+            sync();
+        }
+    }
+
+    // attach handlers for editable fields (excluding skills list items handled separately)
+    document.querySelectorAll('#live-preview [data-field]').forEach(el=>{
+        if(el.id === 'preview-skills-list') return;
+        el.style.cursor = 'text';
+        el.addEventListener('click', function(e){
+            if(el.isContentEditable) return;
+            makeEditable(el);
+            e.stopPropagation();
+        });
+        el.addEventListener('blur', function(){ finishEdit(el); });
+        el.addEventListener('keydown', function(ev){
+            if(ev.key === 'Enter'){
+                ev.preventDefault();
+                el.blur();
+            } else if(ev.key === 'Escape'){
+                el.blur();
+            }
+        });
+    });
+
+    // Special handling: allow adding/removing skills by editing the list
+    const skillsList = document.getElementById('preview-skills-list');
+    if(skillsList){
+        // click existing li to edit
+        skillsList.addEventListener('click', function(e){
+            const target = e.target;
+            if(target && target.tagName === 'LI'){
+                if(!target.isContentEditable) makeEditable(target);
+            }
+        });
+        // double-click to create a new skill item
+        skillsList.addEventListener('dblclick', function(e){
+            const li = document.createElement('li'); li.textContent = 'New skill'; skillsList.appendChild(li);
+            attachSkillHandlers(li);
+            makeEditable(li);
+        });
+    }
+});
+</script>
 {% endblock %}

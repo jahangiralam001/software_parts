@@ -6,11 +6,13 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <header>
-        <h1>ResumeBuilder</h1>
+    <header class="site-header">
+        <div class="container header-inner">
+            <h1 class="brand">ResumeBuilder</h1>
+        </div>
     </header>
 
-    <main>
+    <main class="container main-content">
         {% block content %}{% endblock %}
     </main>
 </body>

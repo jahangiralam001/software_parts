@@ -3,26 +3,72 @@
 {% block title %}Resume Preview{% endblock %}
 
 {% block content %}
-<section class="resume">
-    <h2>{{ name }}</h2>
-    <p>{{ email }}</p>
+<div class="resume-preview">
+    <div class="resume-header">
+        <div class="meta">
+            <div>
+                <h2 class="resume-name">{{ name or 'Your Name' }}</h2>
+                <p class="resume-summary">A short professional summary goes here. You can edit this in the form to the left.</p>
+            </div>
+            <div class="avatar" aria-hidden="true">
+                <!-- placeholder circle; use <img> if you add avatar upload -->
+            </div>
+        </div>
+    </div>
 
-    <hr>
+    <div class="contact-bar">
+        <div class="contact-item">✉️ {{ email or 'email@example.com' }}</div>
+        <div class="contact-item">📍 City, Country</div>
+        <div class="contact-item">🔗 portfolio.example.com</div>
+    </div>
 
-    <h3>Experience</h3>
-    <p>Add your experience here.</p>
+    <div class="resume-body">
+        <div class="col-left">
+            <div class="section">
+                <h3>Education</h3>
+                <div>
+                    <div class="item-title">B.Sc in Computer Science</div>
+                    <div class="muted">University Name — 2020 - 2024</div>
+                    <p>Short description of notable achievements or final project.</p>
+                </div>
+            </div>
 
-    <h3>Education</h3>
-    <p>Add your education here.</p>
+            <div class="section">
+                <h3>Work experience</h3>
+                <div>
+                    <div class="item-title">Sr. Sales & IT Executive — TCL Global</div>
+                    <div class="muted">02/2025 - Present</div>
+                    <p>Describe responsibilities and accomplishments here.</p>
+                </div>
+            </div>
+        </div>
 
-    <h3>Skills</h3>
-    <p>Add your skills here.</p>
-</section>
-<form method="post" action="/resume/pdf">
-    <input type="hidden" name="name" value="{{ name }}">
-    <input type="hidden" name="email" value="{{ email }}">
-    <button type="submit">Download PDF</button>
-</form>
+        <aside class="col-right">
+            <div class="section">
+                <h3>Skills Inventory</h3>
+                <ul>
+                    <li>Python, JavaScript, SQL</li>
+                    <li>HTML, CSS, Responsive Design</li>
+                    <li>Git, Linux</li>
+                </ul>
+            </div>
 
-<a href="/">← Edit</a>
+            <div class="section">
+                <h3>Soft Skills</h3>
+                <p>Communication, Teamwork, Problem Solving</p>
+            </div>
+        </aside>
+    </div>
+
+    <div style="padding:18px;border-top:1px solid #eef4f6; display:flex;gap:12px;align-items:center">
+        <form method="post" action="/resume/pdf">
+            <input type="hidden" name="name" value="{{ name }}">
+            <input type="hidden" name="email" value="{{ email }}">
+            <button type="submit">Download PDF</button>
+        </form>
+
+        <a href="/">← Edit</a>
+    </div>
+</div>
+
 {% endblock %}

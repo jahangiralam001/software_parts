@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}My Resumes{% endblock %}
+
+{% block content %}
+<h2>Saved Resumes</h2>
+
+{% if resumes and resumes|length > 0 %}
+    <ul>
+    {% for r in resumes %}
+        <li>
+            <strong>{{ r.name or '(no name)' }}</strong> — {{ r.email or 'no email' }}
+            <a href="/resume/{{ r.id }}/edit" style="margin-left:1rem">Edit</a>
+            <form method="post" action="/resume/{{ r.id }}/delete" style="display:inline; margin-left:0.5rem">
+                <button type="submit">Delete</button>
+            </form>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No resumes yet. <a href="/">Create one</a>.</p>
+{% endif %}
+
+{% endblock %}

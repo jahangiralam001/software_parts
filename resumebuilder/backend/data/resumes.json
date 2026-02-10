@@ -1,0 +1,18 @@
+[
+  {
+    "id": "7a583da1-4009-4f5f-b3a3-a89da22a0fed",
+    "name": "Jahangir",
+    "email": "jahgnirzx@gmail.com",
+    "summary": "Eager to learn and adapt, I enjoy diving into new challenges and analyzing existing processes for improvement. As a detail-oriented team player, my strong organizational skills are showcased when handling multiple projects simultaneously, ensuring a high degree of accuracy in every task undertaken.",
+    "edu_title": "B.Sc in Computer Science",
+    "edu_period": "University Name — 2020 - 2024",
+    "edu_desc": "Short description of notable achievements or final project.",
+    "exp_title": "Sr. Sales & IT Executive — TCL Global",
+    "exp_period": "02/2025 - Present",
+    "exp_desc": "Describe responsibilities and accomplishments here.",
+    "skills": "Python, JavaScript, SQL",
+    "location": "City, Country",
+    "website": "portfolio.example.com",
+    "soft_skills": "Communication, Teamwork, Problem Solving"
+  }
+]
