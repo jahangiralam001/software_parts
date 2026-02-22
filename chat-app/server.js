@@ -18,7 +18,16 @@ io.on('connection', (socket) => {
 
     socket.on('message', (msg) => {
         console.log('server is saying message got from the client:', msg);
-        socket.emit('message', "Server received your msg: "+ msg);
+        // socket.broadcast.emit('message', "Server received your msg: "+ msg);
+        socket.broadcast.emit('message', ""+ msg);
+    })
+
+    socket.on('typing', (msg) => {
+        socket.broadcast.emit('typing');
+    })
+    
+    socket.on('stop typing', (msg) => {
+        socket.broadcast.emit('stop typing');
     })
 
     socket.on('disconnect', () => {

@@ -4,9 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat System</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h2>Simple chat</h2>
+    <div class="chat-wrapper">
+        <div class="chat-container">
+
+            <!-- Header -->
+            <div class="chat-header">
+                <div class="header-avatar">
+                    <div class="avatar">U</div>
+                    <span class="status-dot"></span>
+                </div>
+                <div class="header-info">
+                    <h1 class="chat-title">Chat Room</h1>
+                    <span class="chat-status">Active now</span>
+                </div>
+            </div>
+
+            <!-- Messages area -->
+            <div id="message" class="messages-area"></div>
+
+            <!-- Bottom bar: typing + input -->
+            <div class="bottom-bar">
+                <div id="typing" class="typing-indicator"></div>
+                <div class="input-row">
+                    <input
+                        type="text"
+                        id="messageInput"
+                        class="message-input"
+                        placeholder="Aa"
+                        autocomplete="off"
+                    />
+                    <button id="sendBtn" class="send-btn" title="Send">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="client.js"></script>
 </body>
