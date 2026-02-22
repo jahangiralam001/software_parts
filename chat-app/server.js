@@ -18,8 +18,7 @@ io.on('connection', (socket) => {
 
     socket.on('message', (msg) => {
         console.log('server is saying message got from the client:', msg);
-        // socket.broadcast.emit('message', "Server received your msg: "+ msg);
-        socket.broadcast.emit('message', ""+ msg);
+        socket.broadcast.emit('message', msg);
     })
 
     socket.on('typing', (msg) => {
@@ -33,5 +32,8 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
+    socket.on('message read', (id) => {
+        socket.broadcast.emit('message read', id); // Broadcast to other clients that this message has been read (can be used for read receipts)
+    })
 
 });
