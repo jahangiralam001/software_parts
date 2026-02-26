@@ -35,5 +35,8 @@ io.on('connection', (socket) => {
     socket.on('message read', (id) => {
         socket.broadcast.emit('message read', id); // Broadcast to other clients that this message has been read (can be used for read receipts)
     })
+    socket.on('message delivered', (id) => {
+        socket.broadcast.emit('message delivered', id); // Broadcast to other clients that this message has been delivered (can be used for delivery receipts)
+    })
 
 });

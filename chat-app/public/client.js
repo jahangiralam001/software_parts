@@ -9,23 +9,102 @@ const button = document.getElementById("sendBtn");
 const messageDiv = document.getElementById("message");
 const typingDiv = document.getElementById("typing");
 
+function formatTime(date = new Date()) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
 
-function addMessage(msg, sender, id) {
-    const p = document.createElement("p");
-    p.textContent = sender + ": " + msg;
-    // Add bubble class for styling (sent = right/blue, received = left/gray)
-    p.classList.add(sender === "You" ? "sent" : "received");
-    if(id) {
-        p.setAttribute("data-id", id); // Set data-id attribute for tracking
+function createMessageId() {
+    return `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+}
+
+function setStatusText(statusElement, status) {
+    if (!statusElement) {
+        return;
     }
+
+    statusElement.classList.remove("status-sent", "status-delivered", "status-seen");
+
+    if (status === "sent") {
+        statusElement.textContent = "✓";
+        statusElement.classList.add("status-sent");
+        return;
+    }
+
+    if (status === "delivered") {
+        statusElement.textContent = "✓✓";
+        statusElement.classList.add("status-delivered");
+        return;
+    }
+
+    if (status === "seen") {
+        statusElement.textContent = "✓✓";
+        statusElement.classList.add("status-seen");
+    }
+}
+
+function addMessage(msg, sender, id, time, status = null) {
+    const p = document.createElement("p");
+    const textSpan = document.createElement("span");
+    const metaSpan = document.createElement("span");
+    const timeSpan = document.createElement("span");
+
+    textSpan.classList.add("message-text");
+    textSpan.textContent = msg;
+
+    metaSpan.classList.add("message-meta");
+
+    timeSpan.classList.add("message-time");
+    timeSpan.textContent = time || formatTime();
+
+    p.classList.add(sender === "You" ? "sent" : "received");
+    p.appendChild(textSpan);
+    p.appendChild(metaSpan);
+    metaSpan.appendChild(timeSpan);
+
+    if (sender === "You") {
+        const statusSpan = document.createElement("span");
+        statusSpan.classList.add("message-status");
+        setStatusText(statusSpan, status || "sent");
+        metaSpan.appendChild(statusSpan);
+    }
+
+    if (id) {
+        p.setAttribute("data-id", id);
+    }
+
     messageDiv.appendChild(p);
-    // Auto-scroll to latest message
     messageDiv.scrollTop = messageDiv.scrollHeight;
 }
 
+function updateMessageStatus(id, status) {
+    const messageElement = document.querySelector(`[data-id="${id}"]`);
+    if (!messageElement || !messageElement.classList.contains("sent")) {
+        return;
+    }
+
+    const statusElement = messageElement.querySelector(".message-status");
+    setStatusText(statusElement, status);
+}
+
+function observerMessageVisible(id) {
+    const messageElement = document.querySelector(`[data-id="${id}"]`);
+    if (!messageElement) return;
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                socket.emit('message read', id);
+                observer.unobserve(messageElement);
+            }
+        });
+    }, { threshold: 0.6 });
+
+    observer.observe(messageElement);
+}
+
+
 input.addEventListener('input', () => {
-    // socket.emit('typing', "User is typing...");
-    if(!typing) {
+    if (!typing) {
         typing = true;
         socket.emit('typing');
     }
@@ -43,33 +122,29 @@ input.addEventListener('keydown', (e) => {
 });
 
 button.addEventListener('click', () => {
-    const message = input.value;
-    if(message.trim() === "") return;
-    const messageId = Date.now();
+    const message = input.value.trim();
+    if (message === "") return;
 
-    //1. show message immediately/locally (Sender side)
-    addMessage(message, "You", messageId);
+    const messageId = createMessageId();
+    const messageTime = formatTime();
 
-    //2. send message to the server
-    // socket.emit('message', message);
+    addMessage(message, "You", messageId, messageTime, "sent");
+
     socket.emit('message', {
-        id: messageId, // Unique ID for this message (can be used to track sender/receiver)
+        id: messageId,
         text: message,
-        
-    })
+        time: messageTime
+    });
 
     input.value = "";
 })
 
 
-socket.on('message', (msg) =>{
-    // const p = document.createElement("p");
-    // p.textContent = msg;
-    // messageDiv.appendChild(p);
-    // addMessage(msg, "Other User");
-    addMessage(msg.text, "Other User", msg.id);
-    socket.emit('message read', msg.id); // Notify server that message has been read (can be used for read receipts)
-})
+socket.on('message', (msg) => {
+    addMessage(msg.text, "Other User", msg.id, msg.time);
+    socket.emit('message delivered', msg.id);
+    observerMessageVisible(msg.id);
+});
 
 socket.on('typing', () => {
     typingDiv.textContent = "Other user is typing...";
@@ -82,19 +157,10 @@ socket.on('stop typing', () => {
     typingDiv.textContent = "";
 });
 
-// socket.on('connect', () =>{
-//     console.log("Connected to the server with id: " + socket.id);
-
-//     socket.emit('message', 'Hello from the client!');
-// })
 socket.on('message read', (id) => {
-    // Find the message element with the corresponding data-id and mark it as read (e.g., change color or add a checkmark)
-    const messageElement = document.querySelector(`[data-id="${id}"]`);
-    if(messageElement) {
-        messageElement.textContent += "✓✓ Read"; // Add 'read' class for styling (e.g., change color to indicate read status)
-    }
+    updateMessageStatus(id, 'seen');
 });
 
-socket.on('message', (msg) => {
-    console.log("Message from the server: ", msg);
-})
+socket.on('message delivered', (id) => {
+    updateMessageStatus(id, 'delivered');
+});

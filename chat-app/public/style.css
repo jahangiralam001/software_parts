@@ -16,6 +16,7 @@
     --color-text-primary:     #1c1e21;
     --color-text-secondary:   #65676b;
     --color-status-online:    #31a24c;
+    --color-status-seen:      #31a24c;
     --color-shadow:           rgba(0, 0, 0, 0.12);
 
     /* Typography */
@@ -194,6 +195,42 @@ body {
     word-break: break-word;
     animation: bubbleIn 0.18s ease;
     position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.message-text {
+    white-space: pre-wrap;
+}
+
+.message-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-end;
+    font-size: var(--font-size-xs);
+    line-height: 1;
+}
+
+.message-time {
+    opacity: 0.85;
+}
+
+.message-status {
+    font-weight: 600;
+    letter-spacing: -1px;
+    min-width: 14px;
+    text-align: right;
+}
+
+.status-sent,
+.status-delivered {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.status-seen {
+    color: var(--color-status-seen);
 }
 
 /* Sent — right, blue */
@@ -210,6 +247,10 @@ body {
     background: var(--color-bubble-received);
     color: var(--color-text-received);
     border-bottom-left-radius: 4px;
+}
+
+.messages-area p.received .message-meta {
+    color: var(--color-text-secondary);
 }
 
 /* Group consecutive messages (tighten gap) */
