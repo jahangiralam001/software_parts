@@ -1,0 +1,46 @@
+{
+  "/": [
+    "When recovering a broken system, verify key top-level folders under '/'."
+  ],
+  "/bin": [
+    "If shell scripts fail, confirm core binaries like /bin/sh and /bin/ls exist."
+  ],
+  "/boot": [
+    "After kernel upgrade, check /boot for new vmlinuz and initrd files."
+  ],
+  "/dev": [
+    "To write a USB image, target device files like /dev/sdb carefully."
+  ],
+  "/etc": [
+    "Edit /etc/hosts for local DNS testing.",
+    "Inspect /etc/ssh/sshd_config when SSH settings are wrong."
+  ],
+  "/home": [
+    "Backup only /home to preserve user data while reinstalling system packages."
+  ],
+  "/lib": [
+    "Use ldd to find missing shared libraries causing app startup errors."
+  ],
+  "/opt": [
+    "Place vendor software in /opt to keep package-manager files separate."
+  ],
+  "/proc": [
+    "Read /proc/meminfo to troubleshoot high memory usage."
+  ],
+  "/root": [
+    "Store emergency maintenance scripts in root's home for admins only."
+  ],
+  "/sbin": [
+    "Run fsck from /sbin in maintenance mode to repair filesystems."
+  ],
+  "/tmp": [
+    "If app installs fail, check available space and permissions in /tmp."
+  ],
+  "/usr": [
+    "Find package-provided executables in /usr/bin and manuals in /usr/share/man."
+  ],
+  "/var": [
+    "Investigate outages by reading logs in /var/log.",
+    "Monitor /var/lib growth for services like Docker or databases."
+  ]
+}

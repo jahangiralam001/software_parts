@@ -1,0 +1,141 @@
+{
+  "/": [
+    { "name": "bin", "description": "Essential user commands needed by shell/scripts." },
+    { "name": "boot", "description": "Kernel and bootloader files used at startup." },
+    { "name": "dev", "description": "Device files for disks, terminals, and pseudo-devices." },
+    { "name": "etc", "description": "System-wide host-specific configuration files." },
+    { "name": "home", "description": "Home directories for normal users." },
+    { "name": "lib", "description": "Essential shared libraries and modules." },
+    { "name": "lib32", "description": "32-bit compatibility libraries on multilib systems." },
+    { "name": "lib64", "description": "64-bit runtime libraries and loader paths." },
+    { "name": "libx32", "description": "Libraries for x32 ABI (less common)." },
+    { "name": "media", "description": "Auto-mounted removable media directories." },
+    { "name": "mnt", "description": "Temporary manual mount points for admins." },
+    { "name": "opt", "description": "Optional/vendor-provided software installs." },
+    { "name": "proc", "description": "Virtual kernel/process information filesystem." },
+    { "name": "root", "description": "Home directory of root user." },
+    { "name": "run", "description": "Volatile runtime state (PID, sockets, service data)." },
+    { "name": "sbin", "description": "Essential system administration binaries." },
+    { "name": "srv", "description": "Service data intended to be served by daemons." },
+    { "name": "sys", "description": "Kernel object and device model interface." },
+    { "name": "tmp", "description": "Temporary short-lived files." },
+    { "name": "usr", "description": "Userland programs, libraries, docs, and shared assets." },
+    { "name": "var", "description": "Variable data: logs, cache, spool, state." },
+    { "name": "lost+found", "description": "Recovered filesystem fragments from fsck." }
+  ],
+  "/usr": [
+    { "name": "bin", "description": "Most user commands installed by packages." },
+    { "name": "sbin", "description": "Non-essential admin commands from packages." },
+    { "name": "lib", "description": "Libraries used by programs in /usr/bin and /usr/sbin." },
+    { "name": "lib64", "description": "64-bit libraries under /usr hierarchy." },
+    { "name": "local", "description": "Admin-installed software outside package manager control." },
+    { "name": "share", "description": "Architecture-independent files (man pages, docs, locale)." },
+    { "name": "include", "description": "Header files for compiling software." },
+    { "name": "src", "description": "Optional source code or kernel source trees." }
+  ],
+  "/bin": [
+    { "name": "ls", "description": "List directory contents." },
+    { "name": "cp", "description": "Copy files and directories." },
+    { "name": "mv", "description": "Move or rename files." },
+    { "name": "cat", "description": "Read and print file content." }
+  ],
+  "/boot": [
+    { "name": "grub", "description": "Bootloader configuration and modules." },
+    { "name": "vmlinuz-*", "description": "Linux kernel image files." },
+    { "name": "initrd.img-*", "description": "Initial RAM disk used at boot." }
+  ],
+  "/dev": [
+    { "name": "null", "description": "Black-hole device that discards written data." },
+    { "name": "tty", "description": "Terminal device interface." },
+    { "name": "sda", "description": "Primary block storage device node." },
+    { "name": "random", "description": "Kernel random number source." }
+  ],
+  "/var": [
+    { "name": "log", "description": "System and application logs for troubleshooting." },
+    { "name": "lib", "description": "Persistent service/package state data." },
+    { "name": "cache", "description": "Rebuildable cached data to improve performance." },
+    { "name": "tmp", "description": "Longer-lived temporary files than /tmp." },
+    { "name": "spool", "description": "Queued work like print/mail jobs waiting processing." },
+    { "name": "backups", "description": "Backup copies created by system tools." },
+    { "name": "opt", "description": "Variable data for applications installed in /opt." },
+    { "name": "mail", "description": "User mailboxes (on systems using local mail storage)." }
+  ],
+  "/home": [
+    { "name": "<user>", "description": "Each user gets a private home directory." },
+    { "name": ".config", "description": "Per-user application configuration files." },
+    { "name": "Documents", "description": "Common place for user documents." }
+  ],
+  "/lib": [
+    { "name": "modules", "description": "Kernel modules grouped by kernel version." },
+    { "name": "x86_64-linux-gnu", "description": "Architecture-specific shared libraries." }
+  ],
+  "/lib32": [
+    { "name": "libc.so.6", "description": "Core C runtime for 32-bit binaries." },
+    { "name": "ld-linux.so.2", "description": "32-bit dynamic loader." }
+  ],
+  "/lib64": [
+    { "name": "ld-linux-x86-64.so.2", "description": "64-bit dynamic loader." }
+  ],
+  "/libx32": [
+    { "name": "libc.so.6", "description": "C runtime for x32 ABI binaries." }
+  ],
+  "/media": [
+    { "name": "<user>", "description": "Per-user auto-mount directory for removable drives." },
+    { "name": "USB_DRIVE", "description": "Example mounted external drive directory." }
+  ],
+  "/mnt": [
+    { "name": "data", "description": "Example temporary mount point." },
+    { "name": "backup", "description": "Example admin-created backup mount directory." }
+  ],
+  "/opt": [
+    { "name": "google", "description": "Vendor package namespace (example)." },
+    { "name": "<vendor-app>", "description": "Self-contained third-party app folder." }
+  ],
+  "/proc": [
+    { "name": "cpuinfo", "description": "CPU details provided by kernel." },
+    { "name": "meminfo", "description": "Memory statistics provided by kernel." },
+    { "name": "<pid>", "description": "Per-process virtual directory." }
+  ],
+  "/root": [
+    { "name": ".bashrc", "description": "Root shell startup configuration." },
+    { "name": ".ssh", "description": "SSH keys and root access settings." }
+  ],
+  "/run": [
+    { "name": "systemd", "description": "Runtime state for systemd components." },
+    { "name": "lock", "description": "Runtime lock files." },
+    { "name": "user", "description": "Per-user runtime directories." }
+  ],
+  "/sbin": [
+    { "name": "fsck", "description": "Filesystem consistency check tool." },
+    { "name": "reboot", "description": "Reboot command binary." },
+    { "name": "ip", "description": "Network interface and routing utility." }
+  ],
+  "/srv": [
+    { "name": "www", "description": "Web server content root (common usage)." },
+    { "name": "ftp", "description": "FTP service data root (when used)." }
+  ],
+  "/sys": [
+    { "name": "class", "description": "Device classes (net, block, tty, etc.)." },
+    { "name": "devices", "description": "Kernel-discovered hardware tree." },
+    { "name": "block", "description": "Block device attributes and metadata." }
+  ],
+  "/tmp": [
+    { "name": "tmp.*", "description": "Application temporary files." },
+    { "name": ".X11-unix", "description": "UNIX sockets for X11 sessions." }
+  ],
+  "/lost+found": [
+    { "name": "#<inode>", "description": "Recovered inode fragments after fsck repair." }
+  ],
+  "/etc": [
+    { "name": "passwd", "description": "User account metadata (name, uid, shell, home path)." },
+    { "name": "shadow", "description": "Secured password hashes and account aging rules." },
+    { "name": "group", "description": "Group definitions and group memberships." },
+    { "name": "hosts", "description": "Static hostname-to-IP mappings." },
+    { "name": "fstab", "description": "Filesystem mount definitions used during boot." },
+    { "name": "systemd", "description": "Systemd unit files, drop-ins, and service overrides." },
+    { "name": "network", "description": "Network interface and routing configuration (distro dependent)." },
+    { "name": "ssh", "description": "SSH daemon/client configuration and host keys." },
+    { "name": "cron.d", "description": "Additional scheduled cron job definitions." },
+    { "name": "profile.d", "description": "Shell startup scripts loaded for login sessions." }
+  ]
+}

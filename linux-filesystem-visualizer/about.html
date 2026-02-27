@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About • Linux Filesystem Visualizer</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>About This Project</h1>
+      <p>A memorization-friendly way to learn Linux directories with practical context.</p>
+    </div>
+    <nav>
+      <a href="./index.html">Visualizer</a>
+      <a href="./about.html" class="active">About</a>
+    </nav>
+  </header>
+
+  <main class="panel about-panel">
+    <h2>Learning goal</h2>
+    <p>This site is built for retention. Each directory is explained through seven repeating questions so your brain always sees the same learning pattern.</p>
+
+    <ol>
+      <li>What is this directory?</li>
+      <li>Why does Linux need it?</li>
+      <li>Real files inside it</li>
+      <li>Commands to explore it</li>
+      <li>What happens if you delete it?</li>
+      <li>Difference from similar directory</li>
+      <li>Modern Linux changes</li>
+    </ol>
+
+    <h2>How to use</h2>
+    <ul>
+      <li>Start on the Visualizer page and click one directory at a time.</li>
+      <li>Run commands in a VM or container, not your main system.</li>
+      <li>Open direct pages from <strong>pages/</strong> when revising one directory only.</li>
+    </ul>
+  </main>
+
+  <script type="module">
+    import { initThemeToggle } from "./js/theme.js";
+    initThemeToggle();
+  </script>
+</body>
+</html>

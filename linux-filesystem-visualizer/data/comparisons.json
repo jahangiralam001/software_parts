@@ -1,0 +1,56 @@
+{
+  "/": [
+    {
+      "with": "/root",
+      "focus": "Meaning",
+      "difference": "'/' is the top of the full filesystem tree, while /root is root user's home directory."
+    }
+  ],
+  "/bin": [
+    {
+      "with": "/sbin",
+      "focus": "Audience",
+      "difference": "/bin has essential user commands, /sbin is mostly for system administration."
+    },
+    {
+      "with": "/usr/bin",
+      "focus": "Layout",
+      "difference": "Many modern distros symlink /bin to /usr/bin (merged-/usr)."
+    }
+  ],
+  "/etc": [
+    {
+      "with": "/usr",
+      "focus": "Purpose",
+      "difference": "/etc stores local machine configuration; /usr stores package-provided programs and data."
+    }
+  ],
+  "/home": [
+    {
+      "with": "/root",
+      "focus": "Users",
+      "difference": "/home is for normal users, /root is specifically for the root account."
+    }
+  ],
+  "/lib": [
+    {
+      "with": "/usr/lib",
+      "focus": "Boot dependency",
+      "difference": "/lib historically contains essential libs needed early in boot; /usr/lib holds broader userland libs."
+    }
+  ],
+  "/tmp": [
+    {
+      "with": "/var/tmp",
+      "focus": "Retention",
+      "difference": "/tmp is often cleared at reboot; /var/tmp is expected to survive longer."
+    }
+  ],
+  "/var": [
+    {
+      "with": "/tmp",
+      "focus": "Persistence",
+      "difference": "/var contains changing but persistent data, while /tmp is short-lived scratch space."
+    }
+  ]
+}

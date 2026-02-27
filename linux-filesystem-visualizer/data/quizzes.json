@@ -1,0 +1,44 @@
+{
+  "/": {
+    "question": "Which path is the top-level root of the Linux filesystem tree?",
+    "options": ["/root", "/", "/usr", "/home"],
+    "answer": "/",
+    "explanation": "Everything is organized below '/'."
+  },
+  "/bin": {
+    "question": "Which directory traditionally stores essential user commands like ls and cp?",
+    "options": ["/etc", "/bin", "/var", "/dev"],
+    "answer": "/bin",
+    "explanation": "/bin holds essential user-facing binaries."
+  },
+  "/boot": {
+    "question": "Where are kernel and bootloader files commonly located?",
+    "options": ["/boot", "/tmp", "/opt", "/proc"],
+    "answer": "/boot",
+    "explanation": "/boot stores startup-critical artifacts."
+  },
+  "/etc": {
+    "question": "Where would you usually find system-wide configuration like fstab or passwd?",
+    "options": ["/etc", "/usr", "/home", "/root"],
+    "answer": "/etc",
+    "explanation": "Host-specific configuration belongs in /etc."
+  },
+  "/tmp": {
+    "question": "Which directory is designed for temporary files and may be cleaned automatically?",
+    "options": ["/var", "/tmp", "/lib", "/sbin"],
+    "answer": "/tmp",
+    "explanation": "/tmp is a temporary scratch area for applications."
+  },
+  "/usr": {
+    "question": "Most packaged user-space programs and shared data are located under which path?",
+    "options": ["/usr", "/dev", "/proc", "/boot"],
+    "answer": "/usr",
+    "explanation": "/usr is the main userland software hierarchy."
+  },
+  "/var": {
+    "question": "Logs such as syslog are most commonly found under which path?",
+    "options": ["/var/log", "/usr/log", "/etc/log", "/boot/log"],
+    "answer": "/var/log",
+    "explanation": "Variable runtime data, including logs, lives under /var."
+  }
+}

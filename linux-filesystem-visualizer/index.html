@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Linux Filesystem Visualizer</title>
+	<meta name="description" content="Bird's-eye Linux filesystem visualizer with real examples and practical command exploration." />
+	<link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body data-page="index">
+	<header class="topbar">
+		<div>
+			<h1>Linux Filesystem Visualizer</h1>
+			<p>Understand what each top-level directory does, why it exists, and how to explore it safely.</p>
+		</div>
+		<nav>
+			<a href="./index.html" class="active">Visualizer</a>
+			<a href="./about.html">About</a>
+		</nav>
+	</header>
+
+	<main class="layout">
+		<aside class="panel tree-panel">
+			<div class="panel-title-row">
+				<h2>Filesystem Tree</h2>
+			</div>
+			<input id="treeSearch" type="text" placeholder="Search: /etc, /var, /usr..." aria-label="Search directories" />
+			<div id="revisionControls" class="revision-controls">
+				<h3>Revision Mode</h3>
+				<p>Auto-rotate directories + answer timed quiz.</p>
+				<div class="revision-row">
+					<label for="revisionSeconds">Seconds per directory</label>
+					<input id="revisionSeconds" type="number" min="5" max="120" step="5" value="20" />
+				</div>
+				<div class="revision-actions">
+					<button id="revisionToggle" type="button">Start</button>
+					<button id="revisionNext" type="button">Next now</button>
+					<button id="revisionReset" type="button">Reset history</button>
+				</div>
+				<div class="revision-stats">
+					<span id="revisionTimer">Timer: --</span>
+					<span id="revisionScore">Score: 0/0</span>
+					<span id="revisionBestStreak">Best streak: 0</span>
+					<span id="revisionLastAccuracy">Last session: --</span>
+					<span id="revisionLifetime">Lifetime: 0/0</span>
+				</div>
+			</div>
+			<div id="treeContainer" class="tree"></div>
+		</aside>
+
+		<section class="panel content-panel">
+			<div id="overviewCard" class="overview-card"></div>
+			<div id="contentContainer"></div>
+		</section>
+	</main>
+
+	<footer>
+		<small>Run this project with a local server: in this folder run <strong>python -m http.server 5500</strong>, then open http://localhost:5500 .</small>
+	</footer>
+
+	<script type="module" src="./js/content-loader.js"></script>
+</body>
+</html>
