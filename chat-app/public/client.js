@@ -1,6 +1,21 @@
 const socket = io();
 let typing = false;
 let typingTimeout;
+const MESSAGE_TTL_MS = 300 * 1000; // Messages will expire after 5 minutes (for testing purposes, can be set to 24 hours in production)
+
+function getClientId() {
+    const key = 'chat_client_id';
+    let clientId = localStorage.getItem(key);
+
+    if (!clientId) {
+        clientId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        localStorage.setItem(key, clientId);
+    }
+
+    return clientId;
+}
+
+const clientId = getClientId();
 
 console.log("Trying to connect to the server...");
 
@@ -42,7 +57,7 @@ function setStatusText(statusElement, status) {
     }
 }
 
-function addMessage(msg, sender, id, time, status = null) {
+function addMessage(msg, sender, id, time, status = null, exprireAt = null) {
     const p = document.createElement("p");
     const textSpan = document.createElement("span");
     const metaSpan = document.createElement("span");
@@ -67,9 +82,14 @@ function addMessage(msg, sender, id, time, status = null) {
         setStatusText(statusSpan, status || "sent");
         metaSpan.appendChild(statusSpan);
     }
-
+    
     if (id) {
         p.setAttribute("data-id", id);
+        p.setAttribute("data-expire-at", exprireAt);
+    }
+    // Schedule message expiration if expireAt is provided
+    if (id && exprireAt) {
+        scheduleMessageExpiration(id, exprireAt);
     }
 
     messageDiv.appendChild(p);
@@ -102,6 +122,27 @@ function observerMessageVisible(id) {
     observer.observe(messageElement);
 }
 
+function scheduleMessageExpiration(id, expireAt) {
+    const now = Date.now();
+    const timeleft = expireAt - now;
+
+    if(timeleft <= 0) {
+        removeMessage(id);
+        return;
+    }
+    setTimeout(()=>{
+        removeMessage(id);
+        socket.emit('message expired', id); // Notify server that the message has expired (can be used for cleanup or analytics)
+    }, timeleft);
+}
+
+
+function removeMessage(id) {
+    const messageElement = document.querySelector(`[data-id="${id}"]`);
+    if (messageElement) {
+        messageElement.remove();
+    }       
+}
 
 input.addEventListener('input', () => {
     if (!typing) {
@@ -120,30 +161,44 @@ input.addEventListener('input', () => {
 input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') button.click();
 });
-
+// Send message to the server (other users)
 button.addEventListener('click', () => {
     const message = input.value.trim();
     if (message === "") return;
 
     const messageId = createMessageId();
     const messageTime = formatTime();
+    const createdAt = Date.now();
+    const expireAt = createdAt + MESSAGE_TTL_MS;
 
-    addMessage(message, "You", messageId, messageTime, "sent");
-
+    addMessage(message, "You", messageId, messageTime, "sent", expireAt);
     socket.emit('message', {
         id: messageId,
         text: message,
-        time: messageTime
+        time: messageTime,
+        createdAt: createdAt,
+        expireAt: expireAt,
+        senderId: clientId
     });
 
     input.value = "";
 })
 
-
+// Listen for messages from the server (other users/receivers)
 socket.on('message', (msg) => {
-    addMessage(msg.text, "Other User", msg.id, msg.time);
+    addMessage(msg.text, "Other User", msg.id, msg.time, null, msg.expireAt);
     socket.emit('message delivered', msg.id);
     observerMessageVisible(msg.id);
+});
+
+socket.on('chat history', (historyMessages) => {
+    messageDiv.innerHTML = "";
+
+    historyMessages.forEach((msg) => {
+        const sender = msg.senderId && msg.senderId === clientId ? "You" : "Other User";
+        const status = sender === "You" ? "sent" : null;
+        addMessage(msg.text, sender, msg.id, msg.time, status, msg.expireAt);
+    });
 });
 
 socket.on('typing', () => {
@@ -163,4 +218,8 @@ socket.on('message read', (id) => {
 
 socket.on('message delivered', (id) => {
     updateMessageStatus(id, 'delivered');
+});
+
+socket.on('message expired', (id) => {
+    removeMessage(id);      
 });
