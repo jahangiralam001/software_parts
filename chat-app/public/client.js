@@ -1,7 +1,7 @@
 const socket = io();
 let typing = false;
 let typingTimeout;
-const MESSAGE_TTL_MS = 300 * 1000; // Messages will expire after 5 minutes (for testing purposes, can be set to 24 hours in production)
+const MESSAGE_TTL_MS = 24 * 60 * 60 * 1000; // Messages will expire after 24 hours
 
 function getClientId() {
     const key = 'chat_client_id';

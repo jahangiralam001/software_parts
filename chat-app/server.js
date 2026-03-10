@@ -10,7 +10,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 const DATA_DIR = path.join(__dirname, 'data');
 const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
-const MESSAGE_TTL_MS = 300 * 1000; // Messages will expire after 5 minutes (for testing purposes, can be set to 24 hours in production)
+const MESSAGE_TTL_MS = 24 * 60 * 60 * 1000; // Messages will expire after 24 hours
 
 let messages = [];
 const expirationTimers = new Map();
