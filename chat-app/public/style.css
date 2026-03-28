@@ -716,6 +716,31 @@ body {
 
 .video-call-overlay.hidden { display: none; }
 
+/* Relay-mode image fills the same space as the <video> element */
+.relay-video-img {
+    object-fit: cover;
+    background: #1a1a2e;
+}
+
+/* Relay badge — tells user when server is relaying the call */
+.relay-badge {
+    position: absolute;
+    bottom: 92px;
+    left: 12px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    letter-spacing: 0.2px;
+    pointer-events: none;
+}
+
+.relay-badge.hidden { display: none; }
+
+
 .remote-video {
     width: 100%;
     height: 100%;

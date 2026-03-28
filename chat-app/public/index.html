@@ -83,12 +83,17 @@
 
             <!-- Video Call Overlay -->
             <div id="videoCallOverlay" class="video-call-overlay hidden">
+                <!-- WebRTC remote video (used when P2P works) -->
                 <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
+                <!-- Relay fallback: JPEG frames sent through our Socket.IO server -->
+                <img id="relayVideoImg" class="remote-video relay-video-img hidden" alt="">
                 <video id="localVideo"  class="local-video"  autoplay playsinline muted></video>
                 <div class="vc-duration-badge">
                     <span class="call-live-dot"></span>
                     <span id="videoCallDuration">Calling...</span>
                 </div>
+                <!-- Relay mode badge — shown when P2P fails and server is relaying -->
+                <div id="relayBadge" class="relay-badge hidden">📡 via server</div>
                 <div class="vc-controls">
                     <!-- Mute audio -->
                     <button id="videoMuteAudioBtn" class="vc-btn" title="Mute Audio">
@@ -111,6 +116,7 @@
                     </button>
                 </div>
             </div>
+
 
             <!-- Messages area -->
             <div id="message" class="messages-area"></div>

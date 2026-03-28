@@ -276,7 +276,20 @@ let isCameraOff          = false;
 let amICaller            = false;
 let callTimer            = null;
 let callSeconds          = 0;
-let disconnectTimer      = null; // grace period before ending on 'disconnected'
+let disconnectTimer      = null;
+
+// ── Socket.IO Relay state ────────────────────────────────────────────────
+// Used when WebRTC P2P fails (e.g. both sides behind mobile CGNAT).
+// The server acts as a relay: audio as PCM binary, video as JPEG frames.
+let callRelayMode    = false;  // are we in server-relay mode?
+let relayAudioCtx    = null;   // AudioContext for microphone capture
+let relayAudioProc   = null;   // ScriptProcessorNode (deprecated but widely supported)
+let relayPlayCtx     = null;   // AudioContext for playing received audio
+let relayNextTime    = 0;      // WebAudio clock cursor for gapless playback
+let relayVideoTimer  = null;   // setInterval for JPEG frame sends
+let relayCapVideo    = null;   // hidden <video> used to grab local frames
+let relayCanvas      = null;   // off-screen canvas for JPEG encoding
+let relayRxSampleRate = 44100; // receiver's sample rate (sent by sender in relay-start)
 
 // DOM — audio bar
 const callBtn             = document.getElementById('callBtn');
@@ -294,6 +307,8 @@ const incomingTypeLabel   = document.getElementById('incomingTypeLabel');
 // DOM — video overlay
 const videoCallOverlay  = document.getElementById('videoCallOverlay');
 const remoteVideo       = document.getElementById('remoteVideo');
+const relayVideoImg     = document.getElementById('relayVideoImg');
+const relayBadge        = document.getElementById('relayBadge');
 const localVideo        = document.getElementById('localVideo');
 const videoCallDurEl    = document.getElementById('videoCallDuration');
 const videoMuteAudioBtn = document.getElementById('videoMuteAudioBtn');
@@ -339,12 +354,19 @@ async function createPeerConnection() {
         } else if (s === 'disconnected') {
             disconnectTimer = setTimeout(() => {
                 if (peerConnection && peerConnection.connectionState === 'disconnected') {
-                    endCall(false);
+                    // Still disconnected after 8s — switch to relay then
+                    if (!callRelayMode && callState !== 'idle') startRelayMode();
+                    else endCall(false);
                 }
             }, 8000);
         } else if (s === 'failed') {
             if (disconnectTimer) { clearTimeout(disconnectTimer); disconnectTimer = null; }
-            endCall(false);
+            // ICE failed — try our Socket.IO relay instead of ending the call
+            if (!callRelayMode && callState !== 'idle') {
+                startRelayMode();
+            } else {
+                endCall(false);
+            }
         }
     };
 }
@@ -467,6 +489,7 @@ function endCall(notifyPeer = true) {
     if (localVideo.srcObject)  localVideo.srcObject  = null;
 
     if (disconnectTimer) { clearTimeout(disconnectTimer); disconnectTimer = null; }
+    cleanupRelay();
     pendingOffer = null;
     pendingIceCandidates = [];
     isMuted = false; isCameraOff = false;
@@ -595,6 +618,135 @@ socket.on('ice-candidate', async ({ candidate }) => {
 
 socket.on('call-end',      () => endCall(false));
 socket.on('call-rejected', () => endCall(false));
+
+// ================================================================
+// Socket.IO Media Relay — self-hosted fallback for mobile CGNAT
+// ================================================================
+// How it works:
+//  1. WebRTC P2P is always attempted first.
+//  2. If ICE fails (onconnectionstatechange === 'failed'), we fall back here.
+//  3. Audio: mic → ScriptProcessorNode → Int16 PCM → socket → AudioContext playback
+//  4. Video: local stream → canvas → JPEG → socket → <img> element
+
+async function startRelayMode() {
+    if (callRelayMode) return;
+    callRelayMode = true;
+    console.info('🔀 WebRTC P2P failed — switching to Socket.IO server relay');
+
+    // ── Audio capture via Web Audio API ───────────────────────────
+    if (localStream && localStream.getAudioTracks().length) {
+        try {
+            relayAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const src = relayAudioCtx.createMediaStreamSource(localStream);
+            // ScriptProcessorNode: deprecated but works on all mobile browsers.
+            // Processes audio in 2048-sample chunks (~46ms at 44.1kHz).
+            relayAudioProc = relayAudioCtx.createScriptProcessor(2048, 1, 1);
+            relayAudioProc.onaudioprocess = (e) => {
+                if (!callRelayMode || isMuted) return;
+                const f32 = e.inputBuffer.getChannelData(0);
+                // Convert Float32 (±1.0) → Int16 (saves 50% bandwidth vs float)
+                const i16 = new Int16Array(f32.length);
+                for (let i = 0; i < f32.length; i++) {
+                    i16[i] = Math.max(-32768, Math.min(32767, f32[i] * 32768));
+                }
+                // volatile: drop packet if socket is busy (prefer dropping over latency)
+                socket.volatile.emit('relay-audio', i16.buffer);
+            };
+            src.connect(relayAudioProc);
+            relayAudioProc.connect(relayAudioCtx.destination);
+        } catch (e) { console.warn('Relay audio capture failed:', e); }
+    }
+
+    // ── Video capture via canvas frame grab (8 fps, 320x240 JPEG) ──
+    if (callType === 'video' && localStream && localStream.getVideoTracks().length) {
+        try {
+            relayCanvas = document.createElement('canvas');
+            relayCanvas.width = 320; relayCanvas.height = 240;
+            const ctx2d = relayCanvas.getContext('2d');
+
+            // Hidden video element feeds local webcam frames into the canvas
+            relayCapVideo = document.createElement('video');
+            relayCapVideo.srcObject = localStream;
+            relayCapVideo.muted     = true;
+            relayCapVideo.setAttribute('playsinline', '');
+            await relayCapVideo.play().catch(() => {});
+
+            relayVideoTimer = setInterval(() => {
+                if (!callRelayMode || !relayCapVideo) return;
+                try {
+                    ctx2d.drawImage(relayCapVideo, 0, 0, 320, 240);
+                    const jpeg = relayCanvas.toDataURL('image/jpeg', 0.35);
+                    socket.volatile.emit('relay-video', jpeg);
+                } catch (_) {}
+            }, 125); // ~8 fps
+        } catch (e) { console.warn('Relay video capture failed:', e); }
+    }
+
+    // Show relay badge + notify peer to also switch
+    if (relayBadge) relayBadge.classList.remove('hidden');
+    socket.emit('relay-start', {
+        relayType:  callType,
+        sampleRate: relayAudioCtx ? relayAudioCtx.sampleRate : 44100,
+    });
+}
+
+function cleanupRelay() {
+    callRelayMode = false;
+    if (relayAudioProc)  { try { relayAudioProc.disconnect(); } catch(_) {} relayAudioProc = null; }
+    if (relayAudioCtx)   { relayAudioCtx.close().catch(() => {}); relayAudioCtx = null; }
+    if (relayPlayCtx)    { relayPlayCtx.close().catch(() => {}); relayPlayCtx = null; }
+    if (relayVideoTimer) { clearInterval(relayVideoTimer); relayVideoTimer = null; }
+    if (relayCapVideo)   { relayCapVideo.srcObject = null; relayCapVideo = null; }
+    relayCanvas = null; relayNextTime = 0; relayRxSampleRate = 44100;
+    if (relayVideoImg)  { relayVideoImg.classList.add('hidden'); relayVideoImg.src = ''; }
+    if (relayBadge)     relayBadge.classList.add('hidden');
+    if (remoteVideo)    remoteVideo.style.display = '';
+}
+
+// ── Relay receivers ───────────────────────────────────────────────────
+socket.on('relay-start', ({ relayType, sampleRate }) => {
+    relayRxSampleRate = sampleRate || 44100;
+    if (callState !== 'idle' && !callRelayMode) startRelayMode();
+});
+
+socket.on('relay-audio', (pcmBuffer) => {
+    if (callState === 'idle') return;
+    try {
+        // Lazy-init playback context using the sender's sample rate
+        if (!relayPlayCtx) {
+            relayPlayCtx = new (window.AudioContext || window.webkitAudioContext)(
+                { sampleRate: relayRxSampleRate }
+            );
+            relayNextTime = relayPlayCtx.currentTime + 0.1; // 100ms initial buffer
+        }
+        const ctx = relayPlayCtx;
+        const i16 = new Int16Array(pcmBuffer);
+        const f32 = new Float32Array(i16.length);
+        for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768.0;
+
+        const buf = ctx.createBuffer(1, f32.length, relayRxSampleRate);
+        buf.copyToChannel(f32, 0);
+
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+
+        // Schedule gaplessly: if we fall behind, jump ahead to avoid build-up
+        const now = ctx.currentTime;
+        if (relayNextTime < now) relayNextTime = now + 0.05;
+        src.start(relayNextTime);
+        relayNextTime += buf.duration;
+    } catch (e) { console.warn('Relay audio playback error:', e); }
+});
+
+socket.on('relay-video', (jpeg) => {
+    if (callState === 'idle') return;
+    if (relayVideoImg) {
+        relayVideoImg.src = jpeg;
+        relayVideoImg.classList.remove('hidden');
+        remoteVideo.style.display = 'none'; // hide empty WebRTC video
+    }
+});
 
 // Receive persisted call-log entry from server and render chip
 socket.on('call-log', (entry) => {

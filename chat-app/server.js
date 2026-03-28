@@ -237,6 +237,17 @@ io.on('connection', (socket) => {
     socket.on('call-end',       ()     => socket.broadcast.emit('call-end'));
     socket.on('call-rejected',  ()     => socket.broadcast.emit('call-rejected'));
 
+    // ── Socket.IO Media Relay ─────────────────────────────────────────────
+    // When both peers are behind CGNAT (mobile ↔ mobile), WebRTC P2P fails.
+    // We relay audio (PCM binary) and video (JPEG frames) through this server.
+    // This is the self-hosted alternative to a TURN server.
+    //
+    // socket.volatile = drop packet if socket is busy (real-time priority).
+    // Never queue stale audio/video — dropping is better than lagging.
+    socket.on('relay-start', (data) => socket.broadcast.emit('relay-start', data));
+    socket.on('relay-audio', (pcm)  => socket.volatile.broadcast.emit('relay-audio', pcm));
+    socket.on('relay-video', (jpeg) => socket.volatile.broadcast.emit('relay-video', jpeg));
+
     // ── Call log — persisted with same 24 h TTL as messages ─────────
     socket.on('call-log', async (data) => {
         const createdAt = Date.now();
