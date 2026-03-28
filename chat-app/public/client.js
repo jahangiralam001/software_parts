@@ -234,11 +234,11 @@ socket.on('message expired', (id) => {
 // ================================================================
 const ICE_CONFIG = {
     iceServers: [
-        // STUN — free, no limits, peer-to-peer when possible
+        // Google STUN — peer-to-peer when possible
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
-        // TURN — open relay (free, community-maintained) for strict NAT traversal
+        // Open Relay TURN — free community relay for strict NAT (mobile networks)
         {
             urls: 'turn:openrelay.metered.ca:80',
             username: 'openrelayproject',
@@ -254,7 +254,11 @@ const ICE_CONFIG = {
             username: 'openrelayproject',
             credential: 'openrelayproject'
         }
-    ]
+    ],
+    // Bundle all media over one transport — reduces ICE candidates, improves mobile perf
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require',
+    iceCandidatePoolSize: 10,
 };
 
 // State
@@ -270,6 +274,7 @@ let isCameraOff          = false;
 let amICaller            = false;
 let callTimer            = null;
 let callSeconds          = 0;
+let disconnectTimer      = null; // grace period before ending on 'disconnected'
 
 // DOM — audio bar
 const callBtn             = document.getElementById('callBtn');
@@ -301,21 +306,43 @@ function createPeerConnection() {
         if (candidate) socket.emit('ice-candidate', { candidate });
     };
 
+    // ── Track handler: separate audio + video for mobile reliability ──────
+    // Routing audio through a <video> srcObject is unreliable on mobile
+    // (often played through earpiece, not speaker). Using a dedicated
+    // <audio> element guarantees speaker output on iOS and Android.
     peerConnection.ontrack = (event) => {
-        const stream = event.streams[0];
-        if (callType === 'video') {
-            remoteVideo.srcObject = stream;
-            // Mobile browsers require explicit play() after srcObject is set
-            remoteVideo.play().catch(err => console.warn('Remote video play:', err));
-        } else {
-            remoteAudio.srcObject = stream;
-            remoteAudio.play().catch(err => console.warn('Remote audio play:', err));
+        const track = event.track;
+
+        if (track.kind === 'audio') {
+            // Always route remote audio through dedicated <audio> element
+            const audioStream = new MediaStream([track]);
+            remoteAudio.srcObject = audioStream;
+            remoteAudio.play().catch(e => console.warn('Remote audio play:', e));
+
+        } else if (track.kind === 'video' && callType === 'video') {
+            // Route video track to <video> element (muted — audio is handled above)
+            const videoStream = new MediaStream([track]);
+            remoteVideo.srcObject = videoStream;
+            remoteVideo.muted = true;
+            remoteVideo.play().catch(e => console.warn('Remote video play:', e));
         }
     };
 
+    // ── Connection state: 'disconnected' is transient — give it 8s to recover ──
     peerConnection.onconnectionstatechange = () => {
         const s = peerConnection.connectionState;
-        if (s === 'disconnected' || s === 'failed' || s === 'closed') endCall(false);
+        if (s === 'connected') {
+            if (disconnectTimer) { clearTimeout(disconnectTimer); disconnectTimer = null; }
+        } else if (s === 'disconnected') {
+            disconnectTimer = setTimeout(() => {
+                if (peerConnection && peerConnection.connectionState === 'disconnected') {
+                    endCall(false);
+                }
+            }, 8000);
+        } else if (s === 'failed') {
+            if (disconnectTimer) { clearTimeout(disconnectTimer); disconnectTimer = null; }
+            endCall(false);
+        }
     };
 }
 
@@ -433,9 +460,10 @@ function endCall(notifyPeer = true) {
     if (peerConnection) { peerConnection.close(); peerConnection = null; }
     if (localStream)    { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
     if (remoteAudio.srcObject) remoteAudio.srcObject = null;
-    if (remoteVideo.srcObject) remoteVideo.srcObject = null;
+    if (remoteVideo.srcObject) { remoteVideo.srcObject = null; remoteVideo.muted = false; }
     if (localVideo.srcObject)  localVideo.srcObject  = null;
 
+    if (disconnectTimer) { clearTimeout(disconnectTimer); disconnectTimer = null; }
     pendingOffer = null;
     pendingIceCandidates = [];
     isMuted = false; isCameraOff = false;
