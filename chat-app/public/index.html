@@ -20,22 +20,106 @@
                     <h1 class="chat-title">Chat Room - V1</h1>
                     <span class="chat-status">Active now</span>
                 </div>
+                <div class="header-actions">
+                    <!-- Audio call -->
+                    <button id="callBtn" class="call-btn" title="Audio Call">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="17" height="17">
+                            <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                    <!-- Video call -->
+                    <button id="videoCallBtn" class="call-btn" title="Video Call">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M4.5 4.5a3 3 0 00-3 3v9a3 3 0 003 3h8.25a3 3 0 003-3v-9a3 3 0 00-3-3H4.5zM19.94 18.75l-2.69-2.69V7.94l2.69-2.69c.944-.945 2.56-.276 2.56 1.06v11.38c0 1.336-1.616 2.005-2.56 1.06z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Audio Call Bar -->
+            <div id="activeCallBar" class="active-call-bar hidden">
+                <div class="call-bar-info">
+                    <span class="call-live-dot"></span>
+                    <span id="callDuration" class="call-duration">Calling...</span>
+                </div>
+                <div class="call-bar-controls">
+                    <button id="muteBtn" class="call-control-btn mute-btn" title="Mute">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                            <path d="M8.25 4.5a3.75 3.75 0 117.5 0v8.25a3.75 3.75 0 11-7.5 0V4.5z"/>
+                            <path d="M6 10.5a.75.75 0 01.75.75v1.5a4.5 4.5 0 009 0v-1.5a.75.75 0 011.5 0v1.5a6 6 0 01-5.25 5.954V21h2.25a.75.75 0 010 1.5h-6a.75.75 0 010-1.5H10.5v-2.796A6 6 0 014.5 12.75v-1.5A.75.75 0 016 10.5z"/>
+                        </svg>
+                    </button>
+                    <button id="endCallBtn" class="call-control-btn end-call-btn" title="End Call">
+                        <svg style="transform:rotate(135deg)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                            <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Incoming Call Overlay -->
+            <div id="incomingCallOverlay" class="incoming-call-overlay hidden">
+                <div class="incoming-call-card">
+                    <div class="incoming-call-avatar-wrap">
+                        <span class="pulse-ring"></span>
+                        <div class="incoming-call-avatar">U</div>
+                    </div>
+                    <span id="incomingTypeLabel" class="incoming-call-label">📞 Audio Call</span>
+                    <span class="incoming-call-name">Other User</span>
+                    <div class="incoming-call-actions">
+                        <button id="rejectCallBtn" class="call-action-btn reject-btn" title="Reject">
+                            <svg style="transform:rotate(135deg)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                                <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                        <button id="acceptCallBtn" class="call-action-btn accept-btn" title="Accept">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                                <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Call Overlay -->
+            <div id="videoCallOverlay" class="video-call-overlay hidden">
+                <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
+                <video id="localVideo"  class="local-video"  autoplay playsinline muted></video>
+                <div class="vc-duration-badge">
+                    <span class="call-live-dot"></span>
+                    <span id="videoCallDuration">Calling...</span>
+                </div>
+                <div class="vc-controls">
+                    <!-- Mute audio -->
+                    <button id="videoMuteAudioBtn" class="vc-btn" title="Mute Audio">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M8.25 4.5a3.75 3.75 0 117.5 0v8.25a3.75 3.75 0 11-7.5 0V4.5z"/>
+                            <path d="M6 10.5a.75.75 0 01.75.75v1.5a4.5 4.5 0 009 0v-1.5a.75.75 0 011.5 0v1.5a6 6 0 01-5.25 5.954V21h2.25a.75.75 0 010 1.5h-6a.75.75 0 010-1.5H10.5v-2.796A6 6 0 014.5 12.75v-1.5A.75.75 0 016 10.5z"/>
+                        </svg>
+                    </button>
+                    <!-- End call -->
+                    <button id="videoEndCallBtn" class="vc-btn vc-end-btn" title="End Call">
+                        <svg style="transform:rotate(135deg)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                            <path fill-rule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                    <!-- Mute video -->
+                    <button id="videoMuteVideoBtn" class="vc-btn" title="Camera Off">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M4.5 4.5a3 3 0 00-3 3v9a3 3 0 003 3h8.25a3 3 0 003-3v-9a3 3 0 00-3-3H4.5zM19.94 18.75l-2.69-2.69V7.94l2.69-2.69c.944-.945 2.56-.276 2.56 1.06v11.38c0 1.336-1.616 2.005-2.56 1.06z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <!-- Messages area -->
             <div id="message" class="messages-area"></div>
 
-            <!-- Bottom bar: typing + input -->
+            <!-- Bottom bar -->
             <div class="bottom-bar">
                 <div id="typing" class="typing-indicator"></div>
                 <div class="input-row">
-                    <input
-                        type="text"
-                        id="messageInput"
-                        class="message-input"
-                        placeholder="Aa"
-                        autocomplete="off"
-                    />
+                    <input type="text" id="messageInput" class="message-input" placeholder="Aa" autocomplete="off"/>
                     <button id="sendBtn" class="send-btn" title="Send">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
                             <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
@@ -47,6 +131,7 @@
         </div>
     </div>
 
+    <audio id="remoteAudio" autoplay></audio>
     <script src="/socket.io/socket.io.js"></script>
     <script src="client.js"></script>
 </body>

@@ -355,3 +355,384 @@ body {
         box-shadow: none;
     }
 }
+
+/* =============================================
+   Call Button (Header)
+   ============================================= */
+.chat-container {
+    position: relative; /* needed for overlay positioning */
+}
+
+.header-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.call-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.12s ease;
+}
+
+.call-btn:hover {
+    background: rgba(0, 132, 255, 0.1);
+    transform: scale(1.08);
+}
+
+.call-btn:active { transform: scale(0.92); }
+
+.call-btn.in-call {
+    color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+    animation: callPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes callPulse {
+    0%, 100% { background: rgba(231, 76, 60, 0.1); }
+    50%       { background: rgba(231, 76, 60, 0.22); }
+}
+
+/* =============================================
+   Active Call Bar
+   ============================================= */
+.active-call-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: linear-gradient(90deg, #0065cc 0%, #0084ff 100%);
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.active-call-bar.hidden { display: none; }
+
+.call-bar-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.call-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    animation: blink 1s ease-in-out infinite;
+}
+
+.call-duration {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.call-bar-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.call-control-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.call-control-btn:hover  { transform: scale(1.1); }
+.call-control-btn:active { transform: scale(0.9); }
+
+.mute-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.mute-btn.muted {
+    background: rgba(255, 255, 255, 0.9);
+    color: #0084ff;
+}
+
+.end-call-btn {
+    background: #e74c3c;
+    color: #fff;
+    width: 34px;
+    height: 34px;
+}
+
+/* =============================================
+   Incoming Call Overlay
+   ============================================= */
+.incoming-call-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-radius: var(--radius-container);
+    animation: fadeIn 0.2s ease;
+}
+
+.incoming-call-overlay.hidden { display: none; }
+
+.incoming-call-card {
+    background: var(--color-surface);
+    border-radius: 24px;
+    padding: 32px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+    width: 260px;
+    animation: scaleIn 0.2s ease;
+}
+
+.incoming-call-avatar-wrap {
+    position: relative;
+    margin-bottom: 4px;
+}
+
+.pulse-ring {
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+    border: 3px solid var(--color-primary);
+    animation: pulseRing 1.6s ease-out infinite;
+}
+
+.incoming-call-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0084ff 0%, #44bec7 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 26px;
+    user-select: none;
+}
+
+.incoming-call-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.incoming-call-name {
+    font-size: var(--font-size-title);
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.incoming-call-actions {
+    display: flex;
+    gap: 36px;
+    margin-top: 12px;
+}
+
+.call-action-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.call-action-btn:hover  { filter: brightness(1.1); transform: scale(1.08); }
+.call-action-btn:active { transform: scale(0.93); }
+
+.accept-btn { background: #31a24c; color: #fff; }
+.reject-btn { background: #e74c3c; color: #fff; }
+
+/* =============================================
+   Animations
+   ============================================= */
+@keyframes pulseRing {
+    0%   { transform: scale(1); opacity: 0.9; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.25; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.85); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* =============================================
+   Video Call Overlay
+   ============================================= */
+.video-call-overlay {
+    position: absolute;
+    inset: 0;
+    background: #0d0d0d;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-container);
+    overflow: hidden;
+    animation: fadeIn 0.2s ease;
+}
+
+.video-call-overlay.hidden { display: none; }
+
+.remote-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #1a1a2e;
+}
+
+.local-video {
+    position: absolute;
+    bottom: 88px;
+    right: 12px;
+    width: 110px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    background: #222;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.vc-duration-badge {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.vc-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 14px 12px 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+}
+
+.vc-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+    backdrop-filter: blur(4px);
+}
+
+.vc-btn:hover  { background: rgba(255, 255, 255, 0.32); transform: scale(1.06); }
+.vc-btn:active { transform: scale(0.93); }
+
+.vc-btn.muted,
+.vc-btn.camera-off {
+    background: rgba(255, 255, 255, 0.88);
+    color: #111;
+}
+
+.vc-end-btn {
+    background: #e74c3c;
+    width: 58px;
+    height: 58px;
+}
+
+.vc-end-btn:hover { background: #c0392b; }
+
+/* =============================================
+   Call Log Chip  (Instagram-style)
+   ============================================= */
+.call-log {
+    align-self: center;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px 6px 12px;
+    background: var(--color-input-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin: 6px 0;
+    animation: bubbleIn 0.18s ease;
+    cursor: default;
+    user-select: none;
+    max-width: 90%;
+}
+
+.call-log-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.call-log-text {
+    font-weight: 500;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+}
+
+.call-log-time {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    margin-left: 2px;
+    flex-shrink: 0;
+}
+
+/* Missed / declined — icon + text go red */
+.call-log--missed .call-log-icon,
+.call-log--missed .call-log-text {
+    color: #e74c3c;
+}

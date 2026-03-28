@@ -7,7 +7,9 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: { origin: '*', methods: ['GET', 'POST'] }
+});
 const DATA_DIR = path.join(__dirname, 'data');
 const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
 const MESSAGE_TTL_MS = 24 * 60 * 60 * 1000; // Messages will expire after 24 hours
@@ -119,9 +121,21 @@ initStorage();
 
 app.use(express.static(("public")));
 
-server.listen(3000, () => {
-    console.log("Server is running on port 3000");
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Open http://localhost:${PORT} in your browser`);
 })
+
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`\n❌  Port ${PORT} is already in use.`);
+        console.error(`    Stop the old server first, then run: npm run dev\n`);
+        process.exit(1);
+    } else {
+        throw err;
+    }
+});
 
 io.on('connection', (socket) => {
     console.log('a user connected');
@@ -179,6 +193,40 @@ io.on('connection', (socket) => {
             await expireMessage(id, true);
         } catch (error) {
             console.error('Failed to handle message expired event:', error);
+        }
+    });
+
+    // ── WebRTC Signaling (relay only) ──────────────────
+    socket.on('call-offer',     (data) => socket.broadcast.emit('call-offer', data));
+    socket.on('call-answer',    (data) => socket.broadcast.emit('call-answer', data));
+    socket.on('ice-candidate',  (data) => socket.broadcast.emit('ice-candidate', data));
+    socket.on('call-end',       ()     => socket.broadcast.emit('call-end'));
+    socket.on('call-rejected',  ()     => socket.broadcast.emit('call-rejected'));
+
+    // ── Call log — persisted with same 24 h TTL as messages ─────────
+    socket.on('call-log', async (data) => {
+        const createdAt = Date.now();
+        const expireAt  = createdAt + MESSAGE_TTL_MS;
+
+        const entry = {
+            id:       `${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+            kind:     'call-log',
+            callType: String(data?.callType || 'audio'),
+            status:   String(data?.status   || 'completed'),
+            duration: Number(data?.duration) || 0,
+            time:     data?.time || new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            createdAt,
+            expireAt,
+        };
+
+        messages.push(entry);
+
+        try {
+            await saveMessages();
+            scheduleMessageExpiration(entry.id, expireAt);
+            io.emit('call-log', entry); // broadcast to ALL clients (including sender)
+        } catch (err) {
+            console.error('Failed to persist call log:', err);
         }
     });
 
