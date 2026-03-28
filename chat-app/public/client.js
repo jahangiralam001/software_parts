@@ -302,10 +302,14 @@ function createPeerConnection() {
     };
 
     peerConnection.ontrack = (event) => {
+        const stream = event.streams[0];
         if (callType === 'video') {
-            remoteVideo.srcObject = event.streams[0];
+            remoteVideo.srcObject = stream;
+            // Mobile browsers require explicit play() after srcObject is set
+            remoteVideo.play().catch(err => console.warn('Remote video play:', err));
         } else {
-            remoteAudio.srcObject = event.streams[0];
+            remoteAudio.srcObject = stream;
+            remoteAudio.play().catch(err => console.warn('Remote audio play:', err));
         }
     };
 
@@ -513,6 +517,13 @@ function showConnectedUI() {
         localVideo.srcObject = localStream;
         videoCallOverlay.classList.remove('hidden');
         videoCallBtn.classList.add('in-call');
+        // Wait one frame for overlay to be visible, then play both video elements
+        requestAnimationFrame(() => {
+            localVideo.play().catch(e => console.warn('Local video play:', e));
+            if (remoteVideo.srcObject) {
+                remoteVideo.play().catch(e => console.warn('Remote video play:', e));
+            }
+        });
     } else {
         activeCallBar.classList.remove('hidden');
         callBtn.classList.add('in-call');

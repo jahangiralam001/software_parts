@@ -48,5 +48,15 @@
     "time": "05:59 PM",
     "createdAt": 1774699188584,
     "expireAt": 1774785588584
+  },
+  {
+    "id": "1774703329252-82818",
+    "kind": "call-log",
+    "callType": "video",
+    "status": "completed",
+    "duration": 22,
+    "time": "07:08 PM",
+    "createdAt": 1774703329252,
+    "expireAt": 1774789729252
   }
 ]
