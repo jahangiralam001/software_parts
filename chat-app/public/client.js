@@ -635,3 +635,5 @@ function addCallLogMessage(type, status, durationSecs = 0, time = null) {
     messageDiv.appendChild(wrap);
     messageDiv.scrollTop = messageDiv.scrollHeight;
 }
+
+//hgfh
