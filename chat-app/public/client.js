@@ -232,34 +232,36 @@ socket.on('message expired', (id) => {
 // ================================================================
 // WebRTC — Audio & Video Call
 // ================================================================
-const ICE_CONFIG = {
-    iceServers: [
-        // Google STUN — peer-to-peer when possible
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        // Open Relay TURN — free community relay for strict NAT (mobile networks)
-        {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject'
-        },
-        {
-            urls: 'turn:openrelay.metered.ca:443',
-            username: 'openrelayproject',
-            credential: 'openrelayproject'
-        },
-        {
-            urls: 'turns:openrelay.metered.ca:443?transport=tcp',
-            username: 'openrelayproject',
-            credential: 'openrelayproject'
-        }
-    ],
-    // Bundle all media over one transport — reduces ICE candidates, improves mobile perf
-    bundlePolicy: 'max-bundle',
-    rtcpMuxPolicy: 'require',
-    iceCandidatePoolSize: 10,
-};
+// ── ICE Config (fetched from server — supports Metered.ca dynamic TURN) ───
+// The server returns Metered.ca credentials when env vars are set,
+// or falls back to static openrelay. Cached after first call.
+let _iceConfigCache = null;
+
+async function fetchIceConfig() {
+    if (_iceConfigCache) return _iceConfigCache;
+    try {
+        const res  = await fetch('/api/ice-config');
+        const data = await res.json();
+        _iceConfigCache = {
+            iceServers:        data.iceServers,
+            bundlePolicy:      'max-bundle',
+            rtcpMuxPolicy:     'require',
+            iceCandidatePoolSize: 10,
+        };
+    } catch (e) {
+        console.warn('ICE config fetch failed, using minimal fallback:', e);
+        _iceConfigCache = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+            ],
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require',
+            iceCandidatePoolSize: 10,
+        };
+    }
+    return _iceConfigCache;
+}
 
 // State
 let callState            = 'idle'; // 'idle' | 'calling' | 'incoming' | 'connected'
@@ -299,8 +301,9 @@ const videoMuteVideoBtn = document.getElementById('videoMuteVideoBtn');
 const videoEndCallBtn   = document.getElementById('videoEndCallBtn');
 
 // ── Peer Connection ──────────────────────────────────────────────
-function createPeerConnection() {
-    peerConnection = new RTCPeerConnection(ICE_CONFIG);
+async function createPeerConnection() {
+    const config = await fetchIceConfig();
+    peerConnection = new RTCPeerConnection(config);
 
     peerConnection.onicecandidate = ({ candidate }) => {
         if (candidate) socket.emit('ice-candidate', { candidate });

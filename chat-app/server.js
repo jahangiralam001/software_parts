@@ -117,9 +117,43 @@ async function initStorage() {
     }
 }
 
-initStorage();
+// ── ICE / TURN credential endpoint ───────────────────────────────────────────
+// If METERED_APP_NAME + METERED_API_KEY env vars are set (free Metered.ca account),
+// the server fetches fresh TURN credentials and returns them to the client.
+// Falls back to static public relay credentials if they are not set.
+app.get('/api/ice-config', async (req, res) => {
+    const appName = process.env.METERED_APP_NAME;
+    const apiKey  = process.env.METERED_API_KEY;
+
+    if (appName && apiKey) {
+        try {
+            const url = `https://${appName}.metered.live/api/v1/turn/credentials?apiKey=${apiKey}`;
+            const response = await fetch(url);
+            if (response.ok) {
+                const iceServers = await response.json();
+                return res.json({ iceServers });
+            }
+            console.warn('Metered.ca responded with', response.status);
+        } catch (err) {
+            console.warn('Metered.ca TURN fetch failed:', err.message);
+        }
+    }
+
+    // Static fallback — works for simple NAT, may fail mobile↔mobile
+    res.json({
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'turn:openrelay.metered.ca:80',    username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443',   username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        ]
+    });
+});
 
 app.use(express.static(("public")));
+
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
