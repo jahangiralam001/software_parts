@@ -842,8 +842,7 @@ body {
     inset: 0;
     background: #0d0d0d;
     z-index: 200;
-    display: flex;
-    flex-direction: column;
+    /* No flexbox — all children are position:absolute to avoid video rendering glitches */
     border-radius: var(--radius-container);
     overflow: hidden;
     animation: fadeIn 0.2s ease;
@@ -851,14 +850,14 @@ body {
 
 .video-call-overlay.hidden { display: none; }
 
-/* Relay-mode image fills the same space as the <video> element.
-   flex: 1 ensures it expands to fill, matching the remoteVideo behaviour. */
+/* Relay-mode image — same absolute fill as remoteVideo */
 .relay-video-img {
-    flex: 1;
+    position: absolute;
+    inset: 0;
     width: 100%;
+    height: 100%;
     object-fit: cover;
     background: #1a1a2e;
-    min-height: 0; /* allow flex shrink below intrinsic height */
 }
 
 /* Relay badge — tells user when server is relaying the call */
@@ -880,10 +879,13 @@ body {
 .relay-badge.hidden { display: none; }
 
 
+/* Remote video fills the entire overlay using absolute positioning.
+   Absolute is more reliable than flex for video compositing across browsers. */
 .remote-video {
-    flex: 1;           /* expand to fill all available space in the flex column */
+    position: absolute;
+    inset: 0;
     width: 100%;
-    min-height: 0;     /* allow shrinking below intrinsic height */
+    height: 100%;
     object-fit: cover;
     background: #1a1a2e;
 }
