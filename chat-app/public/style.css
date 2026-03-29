@@ -677,6 +677,138 @@ body {
 .reject-btn { background: #e74c3c; color: #fff; }
 
 /* =============================================
+   Outgoing Call Screen  (callingOverlay)
+   ============================================= */
+.calling-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #05051a 0%, #0a0a2e 55%, #010108 100%);
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 80px 20px 52px;
+    border-radius: var(--radius-container);
+    animation: fadeIn 0.25s ease;
+    overflow: hidden;
+}
+
+.calling-overlay.hidden { display: none; }
+
+.calling-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Avatar + dual expanding ring */
+.calling-avatar-wrap {
+    position: relative;
+    width: 104px;
+    height: 104px;
+    margin-bottom: 10px;
+}
+
+.calling-ring {
+    position: absolute;
+    inset: -14px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 132, 255, 0.45);
+    animation: callingRing 2s ease-out infinite;
+}
+
+.calling-ring-2 {
+    inset: -26px;
+    border-color: rgba(0, 132, 255, 0.22);
+    animation-delay: 0.9s;
+}
+
+@keyframes callingRing {
+    0%   { transform: scale(0.9); opacity: 0.8; }
+    100% { transform: scale(1.5); opacity: 0;   }
+}
+
+.calling-avatar {
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0084ff 0%, #44bec7 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 42px;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 0 0 4px rgba(0, 132, 255, 0.2);
+}
+
+.calling-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.4px;
+}
+
+/* "Calling..." with 3 individually blinking dots */
+.calling-status {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.55);
+    display: flex;
+    align-items: baseline;
+    gap: 0;
+}
+
+.calling-dot {
+    opacity: 0;
+    animation: dotFade 1.5s ease-in-out infinite;
+}
+
+.calling-dot.d1 { animation-delay: 0s;    }
+.calling-dot.d2 { animation-delay: 0.25s; }
+.calling-dot.d3 { animation-delay: 0.5s;  }
+
+@keyframes dotFade {
+    0%, 60%, 100% { opacity: 0; }
+    30%            { opacity: 1; }
+}
+
+/* Red cancel button at the bottom */
+.calling-controls {
+    display: flex;
+    justify-content: center;
+}
+
+.calling-cancel-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: none;
+    background: #e74c3c;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.12s ease;
+    box-shadow: 0 4px 24px rgba(231, 76, 60, 0.45);
+}
+
+.calling-cancel-btn:hover  { background: #c0392b; transform: scale(1.06); }
+.calling-cancel-btn:active { transform: scale(0.93); }
+
+@media (max-width: 600px) {
+    .calling-overlay {
+        border-radius: 0;
+        padding-top: max(60px, env(safe-area-inset-top, 60px));
+        padding-bottom: max(52px, env(safe-area-inset-bottom, 52px));
+    }
+}
+
+/* =============================================
    Animations
    ============================================= */
 @keyframes pulseRing {

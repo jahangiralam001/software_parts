@@ -306,6 +306,7 @@ const incomingTypeLabel   = document.getElementById('incomingTypeLabel');
 
 // DOM — video overlay
 const videoCallOverlay  = document.getElementById('videoCallOverlay');
+const callingOverlay    = document.getElementById('callingOverlay');
 const remoteVideo       = document.getElementById('remoteVideo');
 const relayVideoImg     = document.getElementById('relayVideoImg');
 const relayBadge        = document.getElementById('relayBadge');
@@ -314,6 +315,7 @@ const videoCallDurEl    = document.getElementById('videoCallDuration');
 const videoMuteAudioBtn = document.getElementById('videoMuteAudioBtn');
 const videoMuteVideoBtn = document.getElementById('videoMuteVideoBtn');
 const videoEndCallBtn   = document.getElementById('videoEndCallBtn');
+const cancelCallBtn     = document.getElementById('cancelCallBtn');
 
 // ── Peer Connection ──────────────────────────────────────────────
 async function createPeerConnection() {
@@ -413,14 +415,13 @@ async function startCall(type) {
     await peerConnection.setLocalDescription(offer);
     socket.emit('call-offer', { offer, callType: type });
 
+    // Show the full-screen calling screen for both audio and video
+    callingOverlay.classList.remove('hidden');
     if (type === 'video') {
+        // Pre-attach local stream so it's ready when the screen transitions
         localVideo.srcObject = localStream;
-        videoCallDurEl.textContent = 'Calling...';
-        videoCallOverlay.classList.remove('hidden');
         videoCallBtn.classList.add('in-call');
     } else {
-        callDurationEl.textContent = 'Calling...';
-        activeCallBar.classList.remove('hidden');
         callBtn.classList.add('in-call');
         callBtn.title = 'Cancel Call';
     }
@@ -434,6 +435,7 @@ muteBtn.addEventListener('click',          toggleMute);
 videoMuteAudioBtn.addEventListener('click', toggleMute);
 videoMuteVideoBtn.addEventListener('click', toggleCamera);
 videoEndCallBtn.addEventListener('click',  () => endCall(true));
+cancelCallBtn.addEventListener('click',    () => endCall(true));
 
 async function acceptCall() {
     callType = pendingCallType;
@@ -497,6 +499,7 @@ function endCall(notifyPeer = true) {
     callState = 'idle'; callType = 'audio';
 
     stopCallTimer();
+    callingOverlay.classList.add('hidden');
     activeCallBar.classList.add('hidden');
     videoCallOverlay.classList.add('hidden');
     incomingCallOverlay.classList.add('hidden');
@@ -566,12 +569,14 @@ function stopCallTimer() {
 
 // ── Connected UI ─────────────────────────────────────────────────
 function showConnectedUI() {
+    // Dismiss the calling / incoming screens
     incomingCallOverlay.classList.add('hidden');
+    callingOverlay.classList.add('hidden');
+
     if (callType === 'video') {
         localVideo.srcObject = localStream;
         videoCallOverlay.classList.remove('hidden');
         videoCallBtn.classList.add('in-call');
-        // Wait one frame for overlay to be visible, then play both video elements
         requestAnimationFrame(() => {
             localVideo.play().catch(e => console.warn('Local video play:', e));
             if (remoteVideo.srcObject) {
