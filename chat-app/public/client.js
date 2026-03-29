@@ -406,7 +406,7 @@ async function startCall(type) {
 
     callState = 'calling';
     amICaller = true;
-    createPeerConnection();
+    await createPeerConnection(); // must await — it fetches ICE config async
     localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
 
     const offer = await peerConnection.createOffer();
@@ -449,7 +449,7 @@ async function acceptCall() {
     }
 
     callState = 'connected';
-    createPeerConnection();
+    await createPeerConnection(); // must await — it fetches ICE config async
     localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
 
     await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
