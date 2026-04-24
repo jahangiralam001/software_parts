@@ -8,11 +8,16 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: '*', methods: ['GET', 'POST'] }
+    cors: { origin: '*', methods: ['GET', 'POST'] },
+    maxHttpBufferSize: 3 * 1024 * 1024,
 });
 const DATA_DIR = path.join(__dirname, 'data');
 const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
 const MESSAGE_TTL_MS = 24 * 60 * 60 * 1000; // Messages will expire after 24 hours
+const IMAGE_TTL_MS = 10 * 60 * 1000; // Image messages expire after 10 minutes
+const MAX_CIPHERTEXT_LENGTH = 3 * 1024 * 1024;
+const MAX_IV_LENGTH = 256;
+const MAX_SALT_LENGTH = 256;
 
 let messages = [];
 const expirationTimers = new Map();
@@ -152,6 +157,27 @@ app.get('/api/ice-config', async (req, res) => {
     });
 });
 
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+
+app.use((req, res, next) => {
+    if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] === 'http') {
+        return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; connect-src 'self' https: wss: ws:; img-src 'self' data: blob:; media-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+
+    if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+
+    next();
+});
+
 app.use(express.static(("public")));
 
 
@@ -177,14 +203,48 @@ io.on('connection', (socket) => {
     socket.emit('chat history', messages);
 
     socket.on('message', async (msg) => {
-        console.log('server is saying message got from the client:', msg);
+        console.log('server received message event');
 
         const createdAt = Number(msg?.createdAt) || Date.now();
-        const expireAt = Number(msg?.expireAt) || (createdAt + MESSAGE_TTL_MS);
+        const kind = msg?.kind === 'image' ? 'image' : 'text';
+        const isImageMessage = kind === 'image';
+        const defaultTtl = isImageMessage ? IMAGE_TTL_MS : MESSAGE_TTL_MS;
+        const expireAt = Number(msg?.expireAt) || (createdAt + defaultTtl);
+        const isEncrypted = msg?.encrypted === true;
+        const ciphertext = typeof msg?.ciphertext === 'string' ? msg.ciphertext : '';
+        const iv = typeof msg?.iv === 'string' ? msg.iv : '';
+        const salt = typeof msg?.salt === 'string' ? msg.salt : '';
+        const keyCounter = Number(msg?.keyCounter);
+
+        // For public deployment, only encrypted user payloads are accepted.
+        if (!isEncrypted) {
+            return;
+        }
+
+        if (
+            !ciphertext ||
+            !iv ||
+            !salt ||
+            !Number.isFinite(keyCounter) ||
+            keyCounter < 1 ||
+            ciphertext.length > MAX_CIPHERTEXT_LENGTH ||
+            iv.length > MAX_IV_LENGTH ||
+            salt.length > MAX_SALT_LENGTH
+        ) {
+            return;
+        }
 
         const storedMessage = {
             id: String(msg?.id || `${Date.now()}-${Math.floor(Math.random() * 100000)}`),
-            text: String(msg?.text || ''),
+            kind,
+            text: '',
+            imageData: null,
+            encrypted: true,
+            e2eeVersion: Number(msg?.e2eeVersion) || 1,
+            keyCounter,
+            salt,
+            ciphertext,
+            iv,
             time: msg?.time || new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             createdAt,
             expireAt,
@@ -273,6 +333,32 @@ io.on('connection', (socket) => {
             io.emit('call-log', entry); // broadcast to ALL clients (including sender)
         } catch (err) {
             console.error('Failed to persist call log:', err);
+        }
+    });
+
+    // ── Security events (e.g., key changed) — persisted for chat timeline ──
+    socket.on('security-event', async (data) => {
+        const createdAt = Date.now();
+        const expireAt  = createdAt + MESSAGE_TTL_MS;
+
+        const entry = {
+            id:        `${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+            kind:      'security-event',
+            eventType: String(data?.eventType || 'updated'),
+            senderId:  data?.senderId || null,
+            time:      data?.time || new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            createdAt,
+            expireAt,
+        };
+
+        messages.push(entry);
+
+        try {
+            await saveMessages();
+            scheduleMessageExpiration(entry.id, expireAt);
+            io.emit('security-event', entry);
+        } catch (err) {
+            console.error('Failed to persist security event:', err);
         }
     });
 

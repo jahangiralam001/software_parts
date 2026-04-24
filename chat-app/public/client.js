@@ -21,8 +21,421 @@ console.log("Trying to connect to the server...");
 
 const input = document.getElementById("messageInput");
 const button = document.getElementById("sendBtn");
+const imageBtn = document.getElementById("imageBtn");
+const imageInput = document.getElementById("imageInput");
+const e2eeBtn = document.getElementById("e2eeBtn");
 const messageDiv = document.getElementById("message");
 const typingDiv = document.getElementById("typing");
+const appDialog = document.getElementById("appDialog");
+const appDialogTitle = document.getElementById("appDialogTitle");
+const appDialogMessage = document.getElementById("appDialogMessage");
+const appDialogInput = document.getElementById("appDialogInput");
+const appDialogCancel = document.getElementById("appDialogCancel");
+const appDialogOk = document.getElementById("appDialogOk");
+const IMAGE_TTL_MS = 10 * 60 * 1000;
+const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
+const E2EE_STORAGE_KEY = 'chat_e2ee_passphrase';
+const E2EE_COUNTER_KEY = 'chat_e2ee_send_counter';
+const E2EE_VERSION = 1;
+
+let e2eePassphrase = sessionStorage.getItem(E2EE_STORAGE_KEY) || '';
+let e2eeRootSecretPromise = null;
+let e2eeLegacyKeyPromise = null;
+let e2eeFingerprint = '';
+let sendKeyCounter = Number(localStorage.getItem(E2EE_COUNTER_KEY) || 0);
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+function showAppDialog(options) {
+    const {
+        title = 'Notice',
+        message = '',
+        mode = 'alert',
+        okText = 'OK',
+        cancelText = 'Cancel',
+        inputValue = '',
+        inputPlaceholder = '',
+    } = options;
+
+    return new Promise((resolve) => {
+        if (!appDialog) {
+            resolve(mode === 'prompt' ? null : true);
+            return;
+        }
+
+        appDialogTitle.textContent = title;
+        appDialogMessage.textContent = message;
+        appDialogOk.textContent = okText;
+        appDialogCancel.textContent = cancelText;
+
+        const isPrompt = mode === 'prompt';
+        const isConfirm = mode === 'confirm';
+
+        appDialogInput.classList.toggle('hidden', !isPrompt);
+        appDialogCancel.style.display = isConfirm || isPrompt ? '' : 'none';
+
+        if (isPrompt) {
+            appDialogInput.value = inputValue;
+            appDialogInput.placeholder = inputPlaceholder;
+        } else {
+            appDialogInput.value = '';
+            appDialogInput.placeholder = '';
+        }
+
+        const close = (value) => {
+            appDialog.classList.add('hidden');
+            appDialogOk.removeEventListener('click', onOk);
+            appDialogCancel.removeEventListener('click', onCancel);
+            appDialog.removeEventListener('click', onBackdropClick);
+            document.removeEventListener('keydown', onKeyDown);
+            resolve(value);
+        };
+
+        const onOk = () => {
+            if (isPrompt) {
+                close(appDialogInput.value);
+            } else {
+                close(true);
+            }
+        };
+
+        const onCancel = () => {
+            close(isPrompt ? null : false);
+        };
+
+        const onBackdropClick = (event) => {
+            if (!event.target.matches('[data-dialog-close="backdrop"]')) return;
+            if (mode === 'alert') {
+                close(true);
+            } else {
+                onCancel();
+            }
+        };
+
+        const onKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                if (mode === 'alert') close(true);
+                else onCancel();
+                return;
+            }
+
+            if (event.key === 'Enter') {
+                onOk();
+            }
+        };
+
+        appDialogOk.addEventListener('click', onOk);
+        appDialogCancel.addEventListener('click', onCancel);
+        appDialog.addEventListener('click', onBackdropClick);
+        document.addEventListener('keydown', onKeyDown);
+
+        appDialog.classList.remove('hidden');
+        if (isPrompt) appDialogInput.focus();
+        else appDialogOk.focus();
+    });
+}
+
+function appAlert(message, title = 'Notice') {
+    return showAppDialog({ title, message, mode: 'alert' });
+}
+
+function appConfirm(message, title = 'Confirm') {
+    return showAppDialog({ title, message, mode: 'confirm' });
+}
+
+function appPrompt(message, inputValue = '', title = 'Input') {
+    return showAppDialog({
+        title,
+        message,
+        mode: 'prompt',
+        inputValue,
+        inputPlaceholder: 'Enter value',
+    });
+}
+
+function updateE2EEButtonState() {
+    if (!e2eeBtn) return;
+    const configured = Boolean(e2eePassphrase);
+    e2eeBtn.classList.toggle('configured', configured);
+    e2eeBtn.title = configured ? 'Encryption key set (tap to change)' : 'Set encryption key';
+}
+
+function toBase64(bytes) {
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+}
+
+function fromBase64(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+function bytesToHex(bytes) {
+    return Array.from(bytes)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+function formatFingerprint(bytes) {
+    const hex = bytesToHex(bytes).slice(0, 24);
+    return hex.match(/.{1,4}/g).join('-').toUpperCase();
+}
+
+async function deriveRootSecret(passphrase) {
+    const passphraseKey = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(passphrase),
+        'PBKDF2',
+        false,
+        ['deriveBits']
+    );
+
+    const bits = await crypto.subtle.deriveBits(
+        {
+            name: 'PBKDF2',
+            salt: encoder.encode('chat-app-e2ee-v1'),
+            iterations: 210000,
+            hash: 'SHA-256',
+        },
+        passphraseKey,
+        256
+    );
+
+    return new Uint8Array(bits);
+}
+
+async function deriveLegacyE2EEKey(passphrase) {
+    const passphraseKey = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(passphrase),
+        'PBKDF2',
+        false,
+        ['deriveKey']
+    );
+
+    return crypto.subtle.deriveKey(
+        {
+            name: 'PBKDF2',
+            salt: encoder.encode('chat-app-e2ee-v1'),
+            iterations: 210000,
+            hash: 'SHA-256',
+        },
+        passphraseKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+    );
+}
+
+async function deriveMessageKey(rootSecret, senderId, keyCounter, saltBytes) {
+    const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        rootSecret,
+        'HKDF',
+        false,
+        ['deriveKey']
+    );
+
+    const info = encoder.encode(`chat-msg|v${E2EE_VERSION}|${senderId}|${keyCounter}`);
+
+    return crypto.subtle.deriveKey(
+        {
+            name: 'HKDF',
+            hash: 'SHA-256',
+            salt: saltBytes,
+            info,
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+    );
+}
+
+async function setE2EEPassphrase(passphrase) {
+    const prevFingerprint = e2eeFingerprint;
+    const hadKeyBefore = Boolean(e2eePassphrase);
+
+    e2eePassphrase = passphrase.trim();
+    sessionStorage.setItem(E2EE_STORAGE_KEY, e2eePassphrase);
+    e2eeRootSecretPromise = deriveRootSecret(e2eePassphrase);
+    e2eeLegacyKeyPromise = deriveLegacyE2EEKey(e2eePassphrase);
+
+    const rootSecret = await e2eeRootSecretPromise;
+    const digest = await crypto.subtle.digest('SHA-256', rootSecret);
+    e2eeFingerprint = formatFingerprint(new Uint8Array(digest));
+
+    updateE2EEButtonState();
+
+    return {
+        changed: hadKeyBefore && prevFingerprint && prevFingerprint !== e2eeFingerprint,
+        fingerprint: e2eeFingerprint,
+    };
+}
+
+async function requestE2EEPassphrase() {
+    const entered = await appPrompt(
+        'Enter a shared chat encryption key (same key on both devices, min 8 characters):',
+        e2eePassphrase || '',
+        'Encryption Key'
+    );
+    if (!entered) return false;
+    if (entered.trim().length < 8) {
+        await appAlert('Encryption key must be at least 8 characters.', 'Invalid Key');
+        return false;
+    }
+    const { changed, fingerprint } = await setE2EEPassphrase(entered);
+    await appAlert(`Safety number: ${fingerprint}\nVerify this matches on both devices.`, 'Safety Number');
+
+    if (changed) {
+        socket.emit('security-event', {
+            eventType: 'key-changed',
+            senderId: clientId,
+            time: formatTime(),
+        });
+    }
+    return true;
+}
+
+async function ensureE2EEReady(interactive = true) {
+    if (!window.crypto || !window.crypto.subtle) {
+        await appAlert('Your browser does not support Web Crypto required for end-to-end encryption.', 'Unsupported Browser');
+        return false;
+    }
+
+    if (!e2eePassphrase) {
+        if (!interactive) return false;
+        const ok = await requestE2EEPassphrase();
+        if (!ok) return false;
+    }
+
+    if (!e2eeRootSecretPromise) {
+        e2eeRootSecretPromise = deriveRootSecret(e2eePassphrase);
+    }
+
+    if (!e2eeLegacyKeyPromise) {
+        e2eeLegacyKeyPromise = deriveLegacyE2EEKey(e2eePassphrase);
+    }
+
+    return true;
+}
+
+async function encryptPayload(plainText, senderId) {
+    const ready = await ensureE2EEReady(true);
+    if (!ready) throw new Error('Encryption key is required');
+
+    const nextCounter = sendKeyCounter + 1;
+    const rootSecret = await e2eeRootSecretPromise;
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const key = await deriveMessageKey(rootSecret, senderId, nextCounter, salt);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        encoder.encode(plainText)
+    );
+
+    sendKeyCounter = nextCounter;
+    localStorage.setItem(E2EE_COUNTER_KEY, String(sendKeyCounter));
+
+    return {
+        encrypted: true,
+        e2eeVersion: E2EE_VERSION,
+        keyCounter: nextCounter,
+        salt: toBase64(salt),
+        iv: toBase64(iv),
+        ciphertext: toBase64(new Uint8Array(encrypted)),
+    };
+}
+
+async function decryptPayload(msg) {
+    const ready = await ensureE2EEReady(false);
+    if (!ready) throw new Error('Encryption key not configured');
+
+    const iv = fromBase64(msg.iv);
+    const ciphertext = fromBase64(msg.ciphertext);
+
+    if (msg.salt && Number.isFinite(Number(msg.keyCounter))) {
+        const rootSecret = await e2eeRootSecretPromise;
+        const senderIdForKey = msg.senderId || 'unknown';
+        const key = await deriveMessageKey(
+            rootSecret,
+            senderIdForKey,
+            Number(msg.keyCounter),
+            fromBase64(msg.salt)
+        );
+
+        const decrypted = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv },
+            key,
+            ciphertext
+        );
+
+        return decoder.decode(decrypted);
+    }
+
+    // Backward compatibility with earlier encrypted payload format.
+    const legacyKey = await e2eeLegacyKeyPromise;
+    const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        legacyKey,
+        ciphertext
+    );
+
+    return decoder.decode(decrypted);
+}
+
+async function normalizeIncomingMessage(msg) {
+    if (!msg || !msg.encrypted) {
+        return msg;
+    }
+
+    try {
+        const plain = await decryptPayload(msg);
+        if (msg.kind === 'image') {
+            return { ...msg, imageData: plain };
+        }
+        return { ...msg, text: plain };
+    } catch {
+        const fallback = msg.kind === 'image'
+            ? '[Encrypted image - set/correct key to decrypt]'
+            : '[Encrypted message - set/correct key to decrypt]';
+        return { ...msg, text: fallback, imageData: null };
+    }
+}
+
+if (e2eePassphrase) {
+    e2eeRootSecretPromise = deriveRootSecret(e2eePassphrase);
+    e2eeLegacyKeyPromise = deriveLegacyE2EEKey(e2eePassphrase);
+    e2eeRootSecretPromise.then(async (rootSecret) => {
+        const digest = await crypto.subtle.digest('SHA-256', rootSecret);
+        e2eeFingerprint = formatFingerprint(new Uint8Array(digest));
+        updateE2EEButtonState();
+    }).catch(() => {});
+}
+updateE2EEButtonState();
+
+if (e2eeBtn) {
+    e2eeBtn.addEventListener('click', async () => {
+        if (e2eePassphrase) {
+            const shouldRotate = await appConfirm(
+                `Safety number: ${e2eeFingerprint}\n\nPress OK to change the key, or Cancel to keep current key.`,
+                'Encryption Key'
+            );
+            if (!shouldRotate) return;
+        }
+        await requestE2EEPassphrase();
+    });
+}
 
 function formatTime(date = new Date()) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -96,6 +509,75 @@ function addMessage(msg, sender, id, time, status = null, exprireAt = null) {
     messageDiv.scrollTop = messageDiv.scrollHeight;
 }
 
+function addImageMessage(imageData, sender, id, time, status = null, expireAt = null) {
+    const p = document.createElement("p");
+    const image = document.createElement("img");
+    const metaSpan = document.createElement("span");
+    const timeSpan = document.createElement("span");
+
+    p.classList.add(sender === "You" ? "sent" : "received", "image-message");
+
+    image.classList.add("message-image");
+    image.src = imageData;
+    image.alt = "Shared image";
+    image.loading = "lazy";
+
+    metaSpan.classList.add("message-meta");
+
+    timeSpan.classList.add("message-time");
+    timeSpan.textContent = time || formatTime();
+
+    p.appendChild(image);
+    p.appendChild(metaSpan);
+    metaSpan.appendChild(timeSpan);
+
+    if (sender === "You") {
+        const statusSpan = document.createElement("span");
+        statusSpan.classList.add("message-status");
+        setStatusText(statusSpan, status || "sent");
+        metaSpan.appendChild(statusSpan);
+    }
+
+    if (id) {
+        p.setAttribute("data-id", id);
+        p.setAttribute("data-expire-at", expireAt);
+    }
+
+    if (id && expireAt) {
+        scheduleMessageExpiration(id, expireAt);
+    }
+
+    messageDiv.appendChild(p);
+    messageDiv.scrollTop = messageDiv.scrollHeight;
+}
+
+function addSecurityNotice(text) {
+    const notice = document.createElement('div');
+    const icon = document.createElement('span');
+    const body = document.createElement('span');
+
+    notice.className = 'security-notice';
+    icon.className = 'security-notice-icon';
+    icon.textContent = '🔐';
+    body.textContent = text;
+
+    notice.appendChild(icon);
+    notice.appendChild(body);
+    messageDiv.appendChild(notice);
+    messageDiv.scrollTop = messageDiv.scrollHeight;
+}
+
+function buildSecurityNoticeText(eventEntry) {
+    if (eventEntry?.eventType === 'key-changed') {
+        if (eventEntry.senderId && eventEntry.senderId === clientId) {
+            return 'Your security code with this chat changed. Messages sent before change may not decrypt.';
+        }
+        return 'Security code with this chat changed. Verify with your contact.';
+    }
+
+    return 'Security settings were updated for this chat.';
+}
+
 function updateMessageStatus(id, status) {
     const messageElement = document.querySelector(`[data-id="${id}"]`);
     if (!messageElement || !messageElement.classList.contains("sent")) {
@@ -162,7 +644,7 @@ input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') button.click();
 });
 // Send message to the server (other users)
-button.addEventListener('click', () => {
+button.addEventListener('click', async () => {
     const message = input.value.trim();
     if (message === "") return;
 
@@ -170,11 +652,22 @@ button.addEventListener('click', () => {
     const messageTime = formatTime();
     const createdAt = Date.now();
     const expireAt = createdAt + MESSAGE_TTL_MS;
+    let encryptedPayload;
+
+    try {
+        encryptedPayload = await encryptPayload(message, clientId);
+    } catch (error) {
+        await appAlert('Unable to encrypt message. Set a valid encryption key first.', 'Encryption Error');
+        return;
+    }
 
     addMessage(message, "You", messageId, messageTime, "sent", expireAt);
     socket.emit('message', {
         id: messageId,
-        text: message,
+        kind: 'text',
+        text: '',
+        imageData: null,
+        ...encryptedPayload,
         time: messageTime,
         createdAt: createdAt,
         expireAt: expireAt,
@@ -184,26 +677,106 @@ button.addEventListener('click', () => {
     input.value = "";
 })
 
-// Listen for messages from the server (other users/receivers)
-socket.on('message', (msg) => {
-    addMessage(msg.text, "Other User", msg.id, msg.time, null, msg.expireAt);
-    socket.emit('message delivered', msg.id);
-    observerMessageVisible(msg.id);
+imageBtn.addEventListener('click', () => {
+    imageInput.click();
 });
 
-socket.on('chat history', (historyMessages) => {
+imageInput.addEventListener('change', () => {
+    const file = imageInput.files && imageInput.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        appAlert('Please select an image file.', 'Invalid File');
+        imageInput.value = '';
+        return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        appAlert('Image is too large. Max size is 2MB.', 'File Too Large');
+        imageInput.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+        const imageData = reader.result;
+        if (typeof imageData !== 'string') {
+            imageInput.value = '';
+            return;
+        }
+
+        let encryptedPayload;
+        try {
+            encryptedPayload = await encryptPayload(imageData, clientId);
+        } catch (error) {
+            await appAlert('Unable to encrypt image. Set a valid encryption key first.', 'Encryption Error');
+            imageInput.value = '';
+            return;
+        }
+
+        const messageId = createMessageId();
+        const messageTime = formatTime();
+        const createdAt = Date.now();
+        const expireAt = createdAt + IMAGE_TTL_MS;
+
+        addImageMessage(imageData, 'You', messageId, messageTime, 'sent', expireAt);
+        socket.emit('message', {
+            id: messageId,
+            kind: 'image',
+            imageData: null,
+            text: '',
+            ...encryptedPayload,
+            time: messageTime,
+            createdAt,
+            expireAt,
+            senderId: clientId,
+        });
+
+        imageInput.value = '';
+    };
+
+    reader.onerror = () => {
+        appAlert('Failed to read the selected image.', 'Upload Error');
+        imageInput.value = '';
+    };
+
+    reader.readAsDataURL(file);
+});
+
+// Listen for messages from the server (other users/receivers)
+socket.on('message', async (msg) => {
+    const normalized = await normalizeIncomingMessage(msg);
+
+    if (normalized.kind === 'image' && normalized.imageData) {
+        addImageMessage(normalized.imageData, "Other User", normalized.id, normalized.time, null, normalized.expireAt);
+    } else {
+        addMessage(normalized.text || '[Encrypted message]', "Other User", normalized.id, normalized.time, null, normalized.expireAt);
+    }
+    socket.emit('message delivered', normalized.id);
+    observerMessageVisible(normalized.id);
+});
+
+socket.on('chat history', async (historyMessages) => {
     messageDiv.innerHTML = "";
 
-    historyMessages.forEach((msg) => {
+    for (const msg of historyMessages) {
         if (msg.kind === 'call-log') {
             // Render persisted call log chip
             addCallLogMessage(msg.callType, msg.status, msg.duration, msg.time);
+        } else if (msg.kind === 'security-event') {
+            addSecurityNotice(buildSecurityNoticeText(msg));
         } else {
-            const sender = msg.senderId && msg.senderId === clientId ? "You" : "Other User";
+            const normalized = await normalizeIncomingMessage(msg);
+            const sender = normalized.senderId && normalized.senderId === clientId ? "You" : "Other User";
             const status = sender === "You" ? "sent" : null;
-            addMessage(msg.text, sender, msg.id, msg.time, status, msg.expireAt);
+
+            if (normalized.kind === 'image' && normalized.imageData) {
+                addImageMessage(normalized.imageData, sender, normalized.id, normalized.time, status, normalized.expireAt);
+            } else {
+                addMessage(normalized.text || '[Encrypted message]', sender, normalized.id, normalized.time, status, normalized.expireAt);
+            }
         }
-    });
+    }
 });
 
 socket.on('typing', () => {
@@ -403,7 +976,7 @@ async function startCall(type) {
     try {
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
     } catch (e) {
-        alert(`${type === 'video' ? 'Camera/Microphone' : 'Microphone'} access denied.`);
+        await appAlert(`${type === 'video' ? 'Camera/Microphone' : 'Microphone'} access denied.`, 'Permission Denied');
         return;
     }
 
@@ -447,7 +1020,7 @@ async function acceptCall() {
     try {
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
     } catch (e) {
-        alert(`${callType === 'video' ? 'Camera/Microphone' : 'Microphone'} access denied.`);
+        await appAlert(`${callType === 'video' ? 'Camera/Microphone' : 'Microphone'} access denied.`, 'Permission Denied');
         rejectCall(); return;
     }
 
@@ -764,6 +1337,10 @@ socket.on('relay-video', (jpeg) => {
 // Receive persisted call-log entry from server and render chip
 socket.on('call-log', (entry) => {
     addCallLogMessage(entry.callType, entry.status, entry.duration, entry.time);
+});
+
+socket.on('security-event', (entry) => {
+    addSecurityNotice(buildSecurityNoticeText(entry));
 });
 
 // ── Call Log Chip (Instagram-style) ───────────────────────────────

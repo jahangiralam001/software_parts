@@ -265,6 +265,21 @@ body {
     color: var(--color-text-secondary);
 }
 
+.messages-area p.image-message {
+    padding: 6px;
+    gap: 6px;
+    max-width: min(78%, 280px);
+}
+
+.message-image {
+    width: 100%;
+    max-height: 320px;
+    object-fit: cover;
+    border-radius: 14px;
+    display: block;
+    background: #d9dde3;
+}
+
 /* Group consecutive messages (tighten gap) */
 .messages-area p.sent+p.sent,
 .messages-area p.received+p.received {
@@ -352,6 +367,29 @@ body {
     transition: background 0.18s ease, transform 0.1s ease;
 }
 
+.media-btn {
+    width: var(--send-btn-size);
+    height: var(--send-btn-size);
+    border-radius: 50%;
+    border: none;
+    background: #e4eaf5;
+    color: #27496d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.18s ease, transform 0.1s ease;
+}
+
+.media-btn:hover {
+    background: #d7e2f4;
+}
+
+.media-btn:active {
+    transform: scale(0.91);
+}
+
 .send-btn:hover {
     background: var(--color-primary-dark);
 }
@@ -400,6 +438,11 @@ body {
     }
 
     .send-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .media-btn {
         width: 44px;
         height: 44px;
     }
@@ -488,6 +531,15 @@ body {
     margin-left: auto;
     display: flex;
     align-items: center;
+    gap: 2px;
+}
+
+.e2ee-btn {
+    color: #6b7280;
+}
+
+.e2ee-btn.configured {
+    color: #0f9d58;
 }
 
 .call-btn {
@@ -1115,5 +1167,114 @@ body {
     color: #e74c3c;
 }
 
-color: #e74c3c;
+.security-notice {
+    align-self: center;
+    max-width: 92%;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    margin: 8px 0;
+    border-radius: 10px;
+    background: #fff3cd;
+    border: 1px solid #efd78a;
+    color: #5d4a16;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.security-notice-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+/* =============================================
+   In-App Dialog
+   ============================================= */
+.app-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.app-dialog.hidden {
+    display: none;
+}
+
+.app-dialog-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+}
+
+.app-dialog-panel {
+    position: relative;
+    width: min(92vw, 440px);
+    background: #fff;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.app-dialog-title {
+    font-size: 18px;
+    color: #1c1e21;
+}
+
+.app-dialog-message {
+    font-size: 14px;
+    line-height: 1.45;
+    color: #3a3d42;
+    white-space: pre-wrap;
+}
+
+.app-dialog-input {
+    width: 100%;
+    border: 1.5px solid #cfd5de;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 16px;
+    outline: none;
+}
+
+.app-dialog-input:focus {
+    border-color: #1f6feb;
+}
+
+.app-dialog-input.hidden {
+    display: none;
+}
+
+.app-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.app-dialog-btn {
+    border: none;
+    border-radius: 999px;
+    min-width: 84px;
+    height: 38px;
+    padding: 0 18px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.app-dialog-cancel {
+    background: #dfe8f8;
+    color: #23406b;
+}
+
+.app-dialog-ok {
+    background: #1f61d1;
+    color: #fff;
 }
