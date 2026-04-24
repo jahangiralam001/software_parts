@@ -3,64 +3,64 @@
    ============================================= */
 :root {
     /* Colors */
-    --color-primary:          #0084ff;
-    --color-primary-dark:     #006edb;
-    --color-bubble-sent:      #0084ff;
-    --color-bubble-received:  #e4e6eb;
-    --color-text-sent:        #ffffff;
-    --color-text-received:    #1c1e21;
-    --color-bg:               #f0f2f5;
-    --color-surface:          #ffffff;
-    --color-input-bg:         #f0f2f5;
-    --color-border:           #e4e6eb;
-    --color-text-primary:     #1c1e21;
-    --color-text-secondary:   #65676b;
-    --color-status-online:    #31a24c;
-    --color-status-seen:      #31a24c;
-    --color-shadow:           rgba(0, 0, 0, 0.12);
+    --color-primary: #0084ff;
+    --color-primary-dark: #006edb;
+    --color-bubble-sent: #0084ff;
+    --color-bubble-received: #e4e6eb;
+    --color-text-sent: #ffffff;
+    --color-text-received: #1c1e21;
+    --color-bg: #f0f2f5;
+    --color-surface: #ffffff;
+    --color-input-bg: #f0f2f5;
+    --color-border: #e4e6eb;
+    --color-text-primary: #1c1e21;
+    --color-text-secondary: #65676b;
+    --color-status-online: #31a24c;
+    --color-status-seen: #31a24c;
+    --color-shadow: rgba(0, 0, 0, 0.12);
 
     /* Typography */
-    --font-family:     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    --font-size-xs:    11px;
-    --font-size-sm:    13px;
-    --font-size-base:  15px;
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-size-xs: 11px;
+    --font-size-sm: 13px;
+    --font-size-base: 15px;
     --font-size-title: 16px;
 
     /* Spacing */
-    --space-xs:  4px;
-    --space-sm:  8px;
-    --space-md:  12px;
-    --space-lg:  16px;
-    --space-xl:  20px;
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 20px;
 
     /* Radii */
-    --radius-bubble:    18px;
-    --radius-input:     22px;
+    --radius-bubble: 18px;
+    --radius-input: 22px;
     --radius-container: 16px;
-    --radius-avatar:    50%;
+    --radius-avatar: 50%;
 
     /* Shadows */
     --shadow-container: 0 8px 32px rgba(0, 0, 0, 0.12);
-    --shadow-header:    0 1px 0 var(--color-border);
+    --shadow-header: 0 1px 0 var(--color-border);
 
     /* Sizes */
-    --avatar-size:   40px;
+    --avatar-size: 40px;
     --send-btn-size: 38px;
 }
 
 /* =============================================
    Reset & Base
    ============================================= */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
-/* Global hidden utility — removes element from layout entirely */
-.hidden { display: none !important; }
-
-html, body {
+html,
+body {
     height: 100%;
     /* Use dynamic viewport height where supported (shrinks when keyboard appears) */
     height: 100dvh;
@@ -84,7 +84,8 @@ body {
 .chat-wrapper {
     width: 100%;
     height: 100vh;
-    height: 100dvh; /* keyboard-aware on mobile */
+    height: 100dvh;
+    /* keyboard-aware on mobile */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -184,9 +185,11 @@ body {
 .messages-area::-webkit-scrollbar {
     width: 4px;
 }
+
 .messages-area::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .messages-area::-webkit-scrollbar-thumb {
     background: var(--color-border);
     border-radius: 4px;
@@ -263,14 +266,21 @@ body {
 }
 
 /* Group consecutive messages (tighten gap) */
-.messages-area p.sent  + p.sent,
-.messages-area p.received + p.received {
+.messages-area p.sent+p.sent,
+.messages-area p.received+p.received {
     margin-top: -2px;
 }
 
 @keyframes bubbleIn {
-    from { opacity: 0; transform: translateY(6px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0)  scale(1);    }
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 /* =============================================
@@ -359,18 +369,18 @@ body {
     .chat-wrapper {
         padding: 0;
         /* Pull edges to device borders, respecting safe areas */
-        padding-top:    env(safe-area-inset-top);
+        padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
-        padding-left:   env(safe-area-inset-left);
-        padding-right:  env(safe-area-inset-right);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
     }
 
     .chat-container {
-        max-width:    100%;
-        max-height:   100%;
-        height:       100%;
+        max-width: 100%;
+        max-height: 100%;
+        height: 100%;
         border-radius: 0;
-        box-shadow:    none;
+        box-shadow: none;
     }
 
     /* Header — compensate top notch if safe-area not already applied */
@@ -470,7 +480,8 @@ body {
    Call Button (Header)
    ============================================= */
 .chat-container {
-    position: relative; /* needed for overlay positioning */
+    position: relative;
+    /* needed for overlay positioning */
 }
 
 .header-actions {
@@ -498,7 +509,9 @@ body {
     transform: scale(1.08);
 }
 
-.call-btn:active { transform: scale(0.92); }
+.call-btn:active {
+    transform: scale(0.92);
+}
 
 .call-btn.in-call {
     color: #e74c3c;
@@ -507,8 +520,15 @@ body {
 }
 
 @keyframes callPulse {
-    0%, 100% { background: rgba(231, 76, 60, 0.1); }
-    50%       { background: rgba(231, 76, 60, 0.22); }
+
+    0%,
+    100% {
+        background: rgba(231, 76, 60, 0.1);
+    }
+
+    50% {
+        background: rgba(231, 76, 60, 0.22);
+    }
 }
 
 /* =============================================
@@ -524,7 +544,9 @@ body {
     flex-shrink: 0;
 }
 
-.active-call-bar.hidden { display: none; }
+.active-call-bar.hidden {
+    display: none;
+}
 
 .call-bar-info {
     display: flex;
@@ -564,8 +586,13 @@ body {
     transition: background 0.15s ease, transform 0.1s ease;
 }
 
-.call-control-btn:hover  { transform: scale(1.1); }
-.call-control-btn:active { transform: scale(0.9); }
+.call-control-btn:hover {
+    transform: scale(1.1);
+}
+
+.call-control-btn:active {
+    transform: scale(0.9);
+}
 
 .mute-btn {
     background: rgba(255, 255, 255, 0.2);
@@ -600,7 +627,9 @@ body {
     animation: fadeIn 0.2s ease;
 }
 
-.incoming-call-overlay.hidden { display: none; }
+.incoming-call-overlay.hidden {
+    display: none;
+}
 
 .incoming-call-card {
     background: var(--color-surface);
@@ -673,11 +702,24 @@ body {
     transition: transform 0.15s ease, filter 0.15s ease;
 }
 
-.call-action-btn:hover  { filter: brightness(1.1); transform: scale(1.08); }
-.call-action-btn:active { transform: scale(0.93); }
+.call-action-btn:hover {
+    filter: brightness(1.1);
+    transform: scale(1.08);
+}
 
-.accept-btn { background: #31a24c; color: #fff; }
-.reject-btn { background: #e74c3c; color: #fff; }
+.call-action-btn:active {
+    transform: scale(0.93);
+}
+
+.accept-btn {
+    background: #31a24c;
+    color: #fff;
+}
+
+.reject-btn {
+    background: #e74c3c;
+    color: #fff;
+}
 
 /* =============================================
    Outgoing Call Screen  (callingOverlay)
@@ -697,7 +739,9 @@ body {
     overflow: hidden;
 }
 
-.calling-overlay.hidden { display: none; }
+.calling-overlay.hidden {
+    display: none;
+}
 
 .calling-body {
     display: flex;
@@ -729,8 +773,15 @@ body {
 }
 
 @keyframes callingRing {
-    0%   { transform: scale(0.9); opacity: 0.8; }
-    100% { transform: scale(1.5); opacity: 0;   }
+    0% {
+        transform: scale(0.9);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
 }
 
 .calling-avatar {
@@ -770,13 +821,29 @@ body {
     animation: dotFade 1.5s ease-in-out infinite;
 }
 
-.calling-dot.d1 { animation-delay: 0s;    }
-.calling-dot.d2 { animation-delay: 0.25s; }
-.calling-dot.d3 { animation-delay: 0.5s;  }
+.calling-dot.d1 {
+    animation-delay: 0s;
+}
+
+.calling-dot.d2 {
+    animation-delay: 0.25s;
+}
+
+.calling-dot.d3 {
+    animation-delay: 0.5s;
+}
 
 @keyframes dotFade {
-    0%, 60%, 100% { opacity: 0; }
-    30%            { opacity: 1; }
+
+    0%,
+    60%,
+    100% {
+        opacity: 0;
+    }
+
+    30% {
+        opacity: 1;
+    }
 }
 
 /* Red cancel button at the bottom */
@@ -800,8 +867,14 @@ body {
     box-shadow: 0 4px 24px rgba(231, 76, 60, 0.45);
 }
 
-.calling-cancel-btn:hover  { background: #c0392b; transform: scale(1.06); }
-.calling-cancel-btn:active { transform: scale(0.93); }
+.calling-cancel-btn:hover {
+    background: #c0392b;
+    transform: scale(1.06);
+}
+
+.calling-cancel-btn:active {
+    transform: scale(0.93);
+}
 
 @media (max-width: 600px) {
     .calling-overlay {
@@ -815,23 +888,49 @@ body {
    Animations
    ============================================= */
 @keyframes pulseRing {
-    0%   { transform: scale(1); opacity: 0.9; }
-    100% { transform: scale(1.5); opacity: 0; }
+    0% {
+        transform: scale(1);
+        opacity: 0.9;
+    }
+
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
 }
 
 @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.25; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.25;
+    }
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.85); }
-    to   { opacity: 1; transform: scale(1); }
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 /* =============================================
@@ -842,20 +941,19 @@ body {
     inset: 0;
     background: #0d0d0d;
     z-index: 200;
-    /* No flexbox — all children are position:absolute to avoid video rendering glitches */
+    display: flex;
+    flex-direction: column;
     border-radius: var(--radius-container);
     overflow: hidden;
     animation: fadeIn 0.2s ease;
 }
 
-.video-call-overlay.hidden { display: none; }
+.video-call-overlay.hidden {
+    display: none;
+}
 
-/* Relay-mode image — same absolute fill as remoteVideo */
+/* Relay-mode image fills the same space as the <video> element */
 .relay-video-img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
     object-fit: cover;
     background: #1a1a2e;
 }
@@ -876,14 +974,12 @@ body {
     pointer-events: none;
 }
 
-.relay-badge.hidden { display: none; }
+.relay-badge.hidden {
+    display: none;
+}
 
 
-/* Remote video fills the entire overlay using absolute positioning.
-   Absolute is more reliable than flex for video compositing across browsers. */
 .remote-video {
-    position: absolute;
-    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -900,7 +996,7 @@ body {
     border-radius: 14px;
     border: 2px solid rgba(255, 255, 255, 0.25);
     background: #222;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .vc-duration-badge {
@@ -949,8 +1045,14 @@ body {
     backdrop-filter: blur(4px);
 }
 
-.vc-btn:hover  { background: rgba(255, 255, 255, 0.32); transform: scale(1.06); }
-.vc-btn:active { transform: scale(0.93); }
+.vc-btn:hover {
+    background: rgba(255, 255, 255, 0.32);
+    transform: scale(1.06);
+}
+
+.vc-btn:active {
+    transform: scale(0.93);
+}
 
 .vc-btn.muted,
 .vc-btn.camera-off {
@@ -964,7 +1066,9 @@ body {
     height: 58px;
 }
 
-.vc-end-btn:hover { background: #c0392b; }
+.vc-end-btn:hover {
+    background: #c0392b;
+}
 
 /* =============================================
    Call Log Chip  (Instagram-style)
@@ -1009,4 +1113,7 @@ body {
 .call-log--missed .call-log-icon,
 .call-log--missed .call-log-text {
     color: #e74c3c;
+}
+
+color: #e74c3c;
 }

@@ -246,7 +246,8 @@ io.on('connection', (socket) => {
     // Never queue stale audio/video — dropping is better than lagging.
     socket.on('relay-start', (data) => socket.broadcast.emit('relay-start', data));
     socket.on('relay-audio', (pcm)  => socket.volatile.broadcast.emit('relay-audio', pcm));
-    socket.on('relay-video', (jpeg) => socket.volatile.broadcast.emit('relay-video', jpeg));
+    // Video frames are sent reliably so the receiver does not fall into a broken-image state.
+    socket.on('relay-video', (jpeg) => socket.broadcast.emit('relay-video', jpeg));
 
     // ── Call log — persisted with same 24 h TTL as messages ─────────
     socket.on('call-log', async (data) => {

@@ -290,6 +290,7 @@ let relayVideoTimer  = null;   // setInterval for JPEG frame sends
 let relayCapVideo    = null;   // hidden <video> used to grab local frames
 let relayCanvas      = null;   // off-screen canvas for JPEG encoding
 let relayRxSampleRate = 44100; // receiver's sample rate (sent by sender in relay-start)
+let relayFrameReceived = false; // switch UI only after first valid relay frame
 
 // DOM — audio bar
 const callBtn             = document.getElementById('callBtn');
@@ -680,8 +681,8 @@ async function startRelayMode() {
                 if (!callRelayMode || !relayCapVideo) return;
                 try {
                     ctx2d.drawImage(relayCapVideo, 0, 0, 320, 240);
-                    const jpeg = relayCanvas.toDataURL('image/jpeg', 0.35);
-                    socket.volatile.emit('relay-video', jpeg);
+                    const jpeg = relayCanvas.toDataURL('image/jpeg', 0.5);
+                    socket.emit('relay-video', jpeg);
                 } catch (_) {}
             }, 125); // ~8 fps
         } catch (e) { console.warn('Relay video capture failed:', e); }
@@ -697,6 +698,7 @@ async function startRelayMode() {
 
 function cleanupRelay() {
     callRelayMode = false;
+    relayFrameReceived = false;
     if (relayAudioProc)  { try { relayAudioProc.disconnect(); } catch(_) {} relayAudioProc = null; }
     if (relayAudioCtx)   { relayAudioCtx.close().catch(() => {}); relayAudioCtx = null; }
     if (relayPlayCtx)    { relayPlayCtx.close().catch(() => {}); relayPlayCtx = null; }
@@ -746,10 +748,16 @@ socket.on('relay-audio', (pcmBuffer) => {
 
 socket.on('relay-video', (jpeg) => {
     if (callState === 'idle') return;
-    if (relayVideoImg) {
-        relayVideoImg.src = jpeg;
-        relayVideoImg.classList.remove('hidden');
-        remoteVideo.style.display = 'none'; // hide empty WebRTC video
+    if (!relayVideoImg || typeof jpeg !== 'string') return;
+    // Ignore malformed frames so we don't switch to a broken image on mobile.
+    if (!jpeg.startsWith('data:image/jpeg') || jpeg.length < 128) return;
+
+    relayVideoImg.src = jpeg;
+    relayVideoImg.classList.remove('hidden');
+
+    if (!relayFrameReceived) {
+        relayFrameReceived = true;
+        remoteVideo.style.display = 'none'; // hide WebRTC video only after first valid relay frame
     }
 });
 

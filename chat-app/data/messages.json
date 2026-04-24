@@ -1,62 +1,20 @@
 [
   {
-    "id": "1774689075440-81959",
+    "id": "1777057984329-98042",
     "text": "hi",
-    "time": "03:11 PM",
-    "createdAt": 1774689075454,
-    "expireAt": 1774775475454,
+    "time": "01:13 AM",
+    "createdAt": 1777057984345,
+    "expireAt": 1777144384345,
     "senderId": "1774689069319-366"
   },
   {
-    "id": "1774689084570-13903",
-    "text": "ij",
-    "time": "03:11 PM",
-    "createdAt": 1774689084570,
-    "expireAt": 1774775484570,
-    "senderId": "1774689069319-366"
-  },
-  {
-    "id": "1774689088530-92043",
-    "text": "k",
-    "time": "03:11 PM",
-    "createdAt": 1774689088530,
-    "expireAt": 1774775488530,
-    "senderId": "1774689069319-366"
-  },
-  {
-    "id": "1774692709940-1857",
-    "text": "test message from A",
-    "time": "04:11 PM",
-    "createdAt": 1774692709957,
-    "expireAt": 1774779109957,
-    "senderId": "1774692662849-37895"
-  },
-  {
-    "id": "1774692754349-54404",
-    "text": "another test",
-    "time": "04:12 PM",
-    "createdAt": 1774692754349,
-    "expireAt": 1774779154349,
-    "senderId": "1774692662849-37895"
-  },
-  {
-    "id": "1774699188584-5201",
+    "id": "1777058053442-57771",
     "kind": "call-log",
-    "callType": "video",
+    "callType": "audio",
     "status": "completed",
-    "duration": 8,
-    "time": "05:59 PM",
-    "createdAt": 1774699188584,
-    "expireAt": 1774785588584
-  },
-  {
-    "id": "1774703329252-82818",
-    "kind": "call-log",
-    "callType": "video",
-    "status": "completed",
-    "duration": 22,
-    "time": "07:08 PM",
-    "createdAt": 1774703329252,
-    "expireAt": 1774789729252
+    "duration": 7,
+    "time": "01:14 AM",
+    "createdAt": 1777058053442,
+    "expireAt": 1777144453442
   }
 ]
