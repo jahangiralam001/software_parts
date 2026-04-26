@@ -850,6 +850,7 @@ let amICaller            = false;
 let callTimer            = null;
 let callSeconds          = 0;
 let disconnectTimer      = null;
+let orientationChangeTimer = null;
 
 // ── Socket.IO Relay state ────────────────────────────────────────────────
 // Used when WebRTC P2P fails (e.g. both sides behind mobile CGNAT).
@@ -909,6 +910,82 @@ if (relayVideoImg) {
 function setCallModeBadge(text) {
     if (!callModeBadge) return;
     callModeBadge.textContent = text;
+}
+
+function isLandscapeViewport() {
+    if (window.matchMedia && window.matchMedia('(orientation: landscape)').matches) return true;
+    return window.innerWidth > window.innerHeight;
+}
+
+function getPreferredVideoConstraints() {
+    const landscape = isLandscapeViewport();
+    return {
+        width: { ideal: landscape ? 640 : 480 },
+        height: { ideal: landscape ? 480 : 640 },
+        facingMode: { ideal: preferredFacingMode },
+    };
+}
+
+async function replaceLocalVideoTrack(newTrack) {
+    if (!newTrack || !localStream) return;
+
+    newTrack.enabled = !isCameraOff;
+
+    const oldTrack = localStream.getVideoTracks()[0];
+    if (oldTrack) {
+        localStream.removeTrack(oldTrack);
+        oldTrack.stop();
+    }
+
+    localStream.addTrack(newTrack);
+
+    if (peerConnection) {
+        const sender = peerConnection.getSenders().find((s) => s.track && s.track.kind === 'video');
+        if (sender) {
+            await sender.replaceTrack(newTrack);
+        }
+    }
+
+    if (localVideo) {
+        localVideo.srcObject = localStream;
+        localVideo.play().catch(() => {});
+    }
+
+    if (relayCapVideo) {
+        relayCapVideo.srcObject = localStream;
+        relayCapVideo.play().catch(() => {});
+    }
+}
+
+async function refreshLocalVideoTrackForOrientation() {
+    if (!localStream || callType !== 'video' || callState === 'idle') return;
+
+    const switched = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: getPreferredVideoConstraints(),
+    });
+
+    const newTrack = switched.getVideoTracks()[0];
+    if (!newTrack) {
+        switched.getTracks().forEach((t) => t.stop());
+        return;
+    }
+
+    await replaceLocalVideoTrack(newTrack);
+}
+
+function onDeviceOrientationChange() {
+    if (orientationChangeTimer) clearTimeout(orientationChangeTimer);
+    orientationChangeTimer = setTimeout(() => {
+        refreshLocalVideoTrackForOrientation().catch((e) => {
+            console.warn('Orientation refresh failed:', e);
+        });
+    }, 250);
+}
+
+window.addEventListener('orientationchange', onDeviceOrientationChange);
+if (screen.orientation && typeof screen.orientation.addEventListener === 'function') {
+    screen.orientation.addEventListener('change', onDeviceOrientationChange);
 }
 
 // ── Peer Connection ──────────────────────────────────────────────
@@ -1003,11 +1080,7 @@ async function startCall(type) {
     const constraints = type === 'video'
         ? {
             audio: true,
-            video: {
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                facingMode: { ideal: preferredFacingMode },
-            },
+            video: getPreferredVideoConstraints(),
         }
         : { audio: true };
 
@@ -1057,11 +1130,7 @@ async function acceptCall() {
     const constraints = callType === 'video'
         ? {
             audio: true,
-            video: {
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                facingMode: { ideal: preferredFacingMode },
-            },
+            video: getPreferredVideoConstraints(),
         }
         : { audio: true };
 
@@ -1180,33 +1249,13 @@ async function switchCameraFacing() {
     try {
         const switched = await navigator.mediaDevices.getUserMedia({
             audio: false,
-            video: {
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                facingMode: { ideal: preferredFacingMode },
-            },
+            video: getPreferredVideoConstraints(),
         });
 
         const newTrack = switched.getVideoTracks()[0];
         if (!newTrack) return;
 
-        const oldTrack = localStream.getVideoTracks()[0];
-        if (oldTrack) {
-            localStream.removeTrack(oldTrack);
-            oldTrack.stop();
-        }
-
-        localStream.addTrack(newTrack);
-
-        if (peerConnection) {
-            const sender = peerConnection.getSenders().find((s) => s.track && s.track.kind === 'video');
-            if (sender) {
-                await sender.replaceTrack(newTrack);
-            }
-        }
-
-        localVideo.srcObject = localStream;
-        localVideo.play().catch(() => {});
+        await replaceLocalVideoTrack(newTrack);
     } catch (e) {
         console.warn('Camera switch failed:', e);
     }
