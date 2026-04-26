@@ -1,24 +1,42 @@
 {% extends "base.html" %}
 
-{% block title %}My Resumes{% endblock %}
+{% block title %}My Resumes | ResumeBuilder{% endblock %}
 
 {% block content %}
-<h2>Saved Resumes</h2>
+<div class="resume-list-header">
+    <h2>My Resumes</h2>
+    <a href="/" class="btn-new" style="text-decoration:none; padding:9px 18px; border-radius:6px; background:var(--teal); color:#fff; font-weight:600; font-size:0.85rem;">+ New Resume</a>
+</div>
 
 {% if resumes and resumes|length > 0 %}
-    <ul>
-    {% for r in resumes %}
-        <li>
-            <strong>{{ r.name or '(no name)' }}</strong> — {{ r.email or 'no email' }}
-            <a href="/resume/{{ r.id }}/edit" style="margin-left:1rem">Edit</a>
-            <form method="post" action="/resume/{{ r.id }}/delete" style="display:inline; margin-left:0.5rem">
-                <button type="submit">Delete</button>
+<div class="resume-cards">
+{% for r in resumes %}
+    {% set p = r.personal if r.personal is defined else {} %}
+    {% set exp = r.experience if r.experience is defined else [] %}
+    <div class="resume-card">
+        <div class="resume-card-name">{{ p.get('name', r.get('name', '(no name)')) or '(no name)' }}</div>
+        <div class="resume-card-sub">
+            {% if exp and exp|length > 0 %}
+                {{ exp[0].get('title', '') }}{% if exp[0].get('company') %} — {{ exp[0].get('company', '') }}{% endif %}
+            {% else %}
+                {{ p.get('email', r.get('email', 'No email')) or 'No email' }}
+            {% endif %}
+        </div>
+        <div class="resume-card-sub" style="font-size:0.75rem;">{{ p.get('location', '') or '' }}</div>
+        <div class="resume-card-actions">
+            <a href="/resume/{{ r.id }}/edit" class="btn-edit">Edit</a>
+            <form method="post" action="/resume/{{ r.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this resume?')">
+                <button type="submit" class="btn-delete">Delete</button>
             </form>
-        </li>
-    {% endfor %}
-    </ul>
+        </div>
+    </div>
+{% endfor %}
+</div>
 {% else %}
-    <p>No resumes yet. <a href="/">Create one</a>.</p>
+<div class="empty-state">
+    <div style="font-size:3rem;margin-bottom:16px;">📄</div>
+    <p style="font-size:1rem;margin-bottom:8px;">No resumes yet.</p>
+    <p><a href="/">Create your first resume!</a></p>
+</div>
 {% endif %}
-
 {% endblock %}

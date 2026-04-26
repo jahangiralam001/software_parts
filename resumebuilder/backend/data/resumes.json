@@ -10,9 +10,139 @@
     "exp_title": "Sr. Sales & IT Executive — TCL Global",
     "exp_period": "02/2025 - Present",
     "exp_desc": "Describe responsibilities and accomplishments here.",
-    "skills": "Python, JavaScript, SQL",
+    "skills": [],
     "location": "City, Country",
     "website": "portfolio.example.com",
-    "soft_skills": "Communication, Teamwork, Problem Solving"
+    "soft_skills": [],
+    "personal": {
+      "email": "dsfsdds",
+      "summary": "sfsfsdf",
+      "phone": "63554564",
+      "location": "sfsdf",
+      "github": "dsfsdf",
+      "linkedin": "sdfsdf",
+      "website": "dfsfsdfs",
+      "photo": "38e94f17-ffe3-45bc-b9f3-aa8142000215.png"
+    },
+    "personal_details": {
+      "dob": "sdfsdf",
+      "nationality": "dfsfs",
+      "marital_status": "sdfssssss"
+    },
+    "education": [
+      {
+        "degree": "sdfdsfdsf",
+        "institution": "dsfsdf",
+        "period": "sdf",
+        "cgpa": "dsfds",
+        "project_label": "sfdsf",
+        "bullets": [
+          "dfdsfd"
+        ]
+      }
+    ],
+    "experience": [
+      {
+        "title": "sfdsdf",
+        "company": "sdfsd",
+        "period": "dfsdf",
+        "department": "sd",
+        "bullets": [
+          "fsdfsd",
+          "sdfsdf",
+          "sdf",
+          "sdf",
+          "sd",
+          "fsd",
+          "fs",
+          "dfsd",
+          "f"
+        ]
+      },
+      {
+        "title": "sfsfsd",
+        "company": "dfsdf",
+        "period": "sdfdsf",
+        "department": "dsfsd",
+        "bullets": [
+          "fsdfdsfs",
+          "fsd",
+          "f",
+          "dsf",
+          "sf",
+          "sd",
+          "f",
+          "sdf",
+          "sd",
+          "fsd",
+          "f",
+          "sdf",
+          "sd",
+          "fsd",
+          "f",
+          "sdfsd",
+          "f",
+          "sdf",
+          "sdf",
+          "s",
+          "fs",
+          "df",
+          "sd",
+          "fs",
+          "df",
+          "sdf"
+        ]
+      }
+    ],
+    "achievements": [
+      {
+        "title": "sdfsdf",
+        "subtitle": "sdfsdf"
+      }
+    ],
+    "publications": [
+      {
+        "url": "sdfsdf",
+        "title": "dfdsff",
+        "subtitle": "sdfsdf"
+      }
+    ],
+    "speaking": [],
+    "languages": [],
+    "interests": [],
+    "references": [],
+    "extracurricular": [],
+    "courses": []
+  },
+  {
+    "id": "4143b741-7b65-4a11-9d45-59850a27033e",
+    "personal": {
+      "name": "Md. Jahangir Alam",
+      "email": "",
+      "phone": "",
+      "location": "",
+      "linkedin": "",
+      "github": "",
+      "website": "",
+      "summary": "",
+      "photo": ""
+    },
+    "education": [],
+    "experience": [],
+    "skills": [],
+    "soft_skills": [],
+    "achievements": [],
+    "publications": [],
+    "speaking": [],
+    "languages": [],
+    "personal_details": {
+      "dob": "",
+      "nationality": "",
+      "marital_status": ""
+    },
+    "interests": [],
+    "references": [],
+    "extracurricular": [],
+    "courses": []
   }
 ]

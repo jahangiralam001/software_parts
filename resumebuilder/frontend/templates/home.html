@@ -1,310 +1,1160 @@
 {% extends "base.html" %}
-
-{% block title %}Home | ResumeBuilder{% endblock %}
+{% block title %}Editor | ResumeBuilder{% endblock %}
+{% block header %}{% endblock %}
+{% block main_class %}{% endblock %}
 
 {% block content %}
-<div>
-    <div class="toolbar" style="margin-bottom:18px;display:flex;justify-content:flex-start;gap:12px;align-items:center">
-        <form id="toolbar-save" method="post" action="/resume/save" style="display:inline">
-            {% if id %}
-            <input type="hidden" name="id" value="{{ id }}">
-            {% endif %}
-            <button id="toolbar-preview" type="button">Preview Resume</button>
-            <!-- Save will submit the hidden #editor form so all hidden inputs are included -->
-            <button id="toolbar-save-btn" type="button">Save</button>
-        </form>
-        <a href="/resumes">My Resumes</a>
+<div class="app-shell">
+  <div class="template-chooser-overlay" id="template-chooser-overlay">
+    <div class="template-chooser-card">
+      <h2>Choose Your Resume Template</h2>
+      <p>Pick a layout to get started. You can change this anytime from Template & Style.</p>
+      <div class="template-chooser-grid">
+        <button class="template-pick" onclick="startWithTemplate('modern')">
+          <span class="tp-title">Modern Professional</span>
+          <span class="tp-desc">Clean two-column layout with highlighted sections.</span>
+        </button>
+        <button class="template-pick" onclick="startWithTemplate('classic')">
+          <span class="tp-title">Classic Compact</span>
+          <span class="tp-desc">Traditional business style, compact and ATS-friendly.</span>
+        </button>
+      </div>
+      <button class="template-skip" onclick="skipTemplateChooser()">Skip for now</button>
     </div>
+  </div>
 
-    <!-- Hidden form used for save/preview; kept in DOM but not shown -->
-    <form id="editor" method="post" action="/resume/save" style="display:none">
-        {% if id %}
-        <input type="hidden" name="id" id="input-id" value="{{ id }}">
-        {% endif %}
-        <input type="hidden" name="name" id="input-name" value="{{ name or '' }}">
-        <input type="hidden" name="email" id="input-email" value="{{ email or '' }}">
-        <input type="hidden" name="summary" id="input-summary" value="{{ summary or 'A short professional summary goes here. You can edit this in the form to the left.' }}">
-        <input type="hidden" name="edu_title" id="input-edu-title" value="{{ edu_title or 'B.Sc in Computer Science' }}">
-        <input type="hidden" name="edu_period" id="input-edu-period" value="{{ edu_period or 'University Name — 2020 - 2024' }}">
-        <input type="hidden" name="edu_desc" id="input-edu-desc" value="Short description of notable achievements or final project.">
-        <input type="hidden" name="exp_title" id="input-exp-title" value="{{ exp_title or 'Sr. Sales & IT Executive — TCL Global' }}">
-        <input type="hidden" name="exp_period" id="input-exp-period" value="{{ exp_period or '02/2025 - Present' }}">
-        <input type="hidden" name="exp_desc" id="input-exp-desc" value="Describe responsibilities and accomplishments here.">
-        <input type="hidden" name="location" id="input-location" value="City, Country">
-        <input type="hidden" name="website" id="input-website" value="portfolio.example.com">
-        <input type="hidden" name="soft_skills" id="input-soft-skills" value="Communication, Teamwork, Problem Solving">
-        <input type="hidden" name="skills" id="input-skills" value="{{ skills or 'Python, JavaScript, SQL' }}">
-    </form>
+  <!-- TOP TOOLBAR -->
+  <div class="top-toolbar">
+    <span class="toolbar-brand">ResumeBuilder</span>
+    <div class="toolbar-sep"></div>
+    <button class="tb-btn" onclick="doUndo()" title="Undo">
+      <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+      Undo
+    </button>
+    <button class="tb-btn" onclick="doRedo()" title="Redo">
+      <svg viewBox="0 0 24 24"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 15.7C4.95 12.81 7.7 10.75 11.5 10.75c1.96 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+      Redo
+    </button>
+    <div class="toolbar-sep"></div>
+    <span class="tb-status" id="save-status"></span>
+    <div class="toolbar-spacer"></div>
+    <a href="/resumes" class="tb-btn">My Resumes</a>
+    <button class="tb-btn-save" onclick="saveResume()">Save</button>
+    <div class="toolbar-sep"></div>
+    <button class="tb-btn-download" onclick="downloadPDF()">
+      <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:#fff"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 8h14v2H5z"/></svg>
+      Download PDF
+    </button>
+  </div>
 
-    <div style="flex:1">
-        <!-- Inline live preview uses same markup as resume_preview.html -->
-        <div id="live-preview" class="resume-preview">
-            <div class="resume-header">
-                <div class="meta">
-                    <div>
-                        <h2 id="preview-name" class="resume-name" data-field="name">{{ name or 'Your Name' }}</h2>
-                        <p id="preview-summary" class="resume-summary" data-field="summary">{{ summary or 'A short professional summary goes here. You can edit this in the form to the left.' }}</p>
-                    </div>
-                    <div class="avatar" aria-hidden="true"></div>
-                </div>
-            </div>
+  <!-- EDITOR BODY -->
+  <div class="editor-body">
+    <!-- LEFT WORKSPACE (Novoresume-like) -->
+    <div class="workspace-shell">
+      <div class="workspace-rail">
+        <button id="ws-btn-content" class="workspace-rail-btn active" onclick="switchWorkspaceTab('content')">My Content</button>
+        <button id="ws-btn-templates" class="workspace-rail-btn" onclick="switchWorkspaceTab('templates')">Templates</button>
+        <button id="ws-btn-assistant" class="workspace-rail-btn" onclick="switchWorkspaceTab('assistant')">AI Assistant</button>
+      </div>
 
-            <div class="contact-bar">
-                <div class="contact-item">
-                    <span id="preview-email" class="contact-text" data-field="email">✉️ {{ email or 'email@example.com' }}</span>
-                </div>
-                <div class="contact-item">
-                    <span id="preview-location" class="contact-text" data-field="location">📍 City, Country</span>
-                </div>
-                <div class="contact-item">
-                    <span id="preview-website" class="contact-text" data-field="website">🔗 portfolio.example.com</span>
-                </div>
-            </div>
+      <div class="sidebar" id="sidebar">
+      <div id="workspace-content-panel" class="workspace-panel">
 
-            <div class="resume-body">
-                <div class="col-left">
-                    <div class="section">
-                        <h3>Education</h3>
-                        <div>
-                            <div id="preview-edu-title" class="item-title" data-field="edu_title">{{ edu_title or 'B.Sc in Computer Science' }}</div>
-                            <div id="preview-edu-period" class="muted" data-field="edu_period">{{ edu_period or 'University Name — 2020 - 2024' }}</div>
-                            <p id="preview-edu-desc" data-field="edu_desc">Short description of notable achievements or final project.</p>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <h3>Work experience</h3>
-                        <div>
-                            <div id="preview-exp-title" class="item-title" data-field="exp_title">{{ exp_title or 'Sr. Sales & IT Executive — TCL Global' }}</div>
-                            <div id="preview-exp-period" class="muted" data-field="exp_period">{{ exp_period or '02/2025 - Present' }}</div>
-                            <p id="preview-exp-desc" data-field="exp_desc">Describe responsibilities and accomplishments here.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <aside class="col-right">
-                    <div class="section">
-                        <h3>Skills Inventory</h3>
-                        <ul id="preview-skills-list" data-field="skills">
-                            {% for s in (skills or 'Python, JavaScript, SQL').split(',') %}
-                                <li>{{ s.strip() }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-
-                    <div class="section">
-                        <h3>Soft Skills</h3>
-                        <p id="preview-soft-skills" data-field="soft_skills">Communication, Teamwork, Problem Solving</p>
-                    </div>
-                </aside>
-            </div>
-
-            <div style="padding:18px;border-top:1px solid #eef4f6; display:flex;gap:12px;align-items:center">
-                <form method="post" action="/resume/pdf">
-                    <input type="hidden" name="name" id="pdf-name">
-                    <input type="hidden" name="email" id="pdf-email">
-                    <button type="submit">Download PDF</button>
-                </form>
-
-                <a id="edit-link" href="/">← Edit</a>
-            </div>
+      <!-- Personal Info -->
+      <div class="sb-section open" id="sec-personal">
+        <div class="sb-section-header" onclick="toggleSec(this)">
+          <span>Personal Information</span><span class="chevron">▾</span>
         </div>
+        <div class="sb-section-body">
+          <!-- Photo -->
+          <div style="text-align:center;margin-bottom:14px;">
+            <div class="photo-upload-area" id="photo-area" onclick="document.getElementById('photo-input').click()" title="Click to upload photo">
+              <img id="photo-preview-img" alt="avatar">
+              <div class="upload-hint" id="photo-hint">📷<br>Upload Photo</div>
+            </div>
+            <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="uploadPhoto(this)">
+          </div>
+          <div class="sb-row">
+            <div class="sb-field"><label>Full Name</label><input type="text" id="f-name" placeholder="Md. Jahangir Alam" oninput="upP('name',this.value)"></div>
+          </div>
+          <div class="sb-field"><label>Professional Summary</label><textarea id="f-summary" rows="3" placeholder="Eager to learn..." oninput="upP('summary',this.value)"></textarea></div>
+          <div class="sb-row">
+            <div class="sb-field"><label>Email</label><input type="email" id="f-email" placeholder="you@email.com" oninput="upP('email',this.value)"></div>
+            <div class="sb-field"><label>Phone</label><input type="text" id="f-phone" placeholder="01234567890" oninput="upP('phone',this.value)"></div>
+          </div>
+          <div class="sb-field"><label>Location</label><input type="text" id="f-location" placeholder="City, Country" oninput="upP('location',this.value)"></div>
+          <div class="sb-row">
+            <div class="sb-field"><label>LinkedIn URL</label><input type="text" id="f-linkedin" placeholder="linkedin.com/in/you" oninput="upP('linkedin',this.value)"></div>
+            <div class="sb-field"><label>GitHub URL</label><input type="text" id="f-github" placeholder="github.com/you" oninput="upP('github',this.value)"></div>
+          </div>
+          <div class="sb-field"><label>Portfolio / Website</label><input type="text" id="f-website" placeholder="portfolio.example.com" oninput="upP('website',this.value)"></div>
+        </div>
+      </div>
+
+      <!-- Education -->
+      <div class="sb-section" id="sec-edu">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Education</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div id="edu-entries"></div>
+          <button class="sb-add-btn" onclick="addEntry('education', eduDefaults())">+ Add Education</button>
+        </div>
+      </div>
+
+      <!-- Work Experience -->
+      <div class="sb-section" id="sec-exp">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Work Experience</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div id="exp-entries"></div>
+          <button class="sb-add-btn" onclick="addEntry('experience', expDefaults())">+ Add Experience</button>
+        </div>
+      </div>
+
+      <!-- Skills -->
+      <div class="sb-section" id="sec-skills">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Skills Inventory</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div id="skills-entries"></div>
+          <button class="sb-add-btn" onclick="addEntry('skills', {category:'',items:''})">+ Add Skill Category</button>
+        </div>
+      </div>
+
+      <!-- Soft Skills -->
+      <div class="sb-section" id="sec-soft">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Soft Skills</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div class="tag-input-row">
+            <div class="sb-field" style="flex:1;margin-bottom:0"><input type="text" id="soft-input" placeholder="e.g. Leadership" onkeydown="tagKeydown(event,'soft_skills','soft-input')"></div>
+            <button class="tag-add-btn" onclick="addTag('soft_skills','soft-input')">Add</button>
+          </div>
+          <div class="tags-display" id="soft-tags" style="margin-top:10px;"></div>
+        </div>
+      </div>
+
+      <!-- Achievements -->
+      <div class="sb-section" id="sec-ach">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Achievements &amp; Awards</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div id="ach-entries"></div>
+          <button class="sb-add-btn" onclick="addEntry('achievements',{title:'',subtitle:''})">+ Add Achievement</button>
+        </div>
+      </div>
+
+      <!-- Publications -->
+      <div class="sb-section" id="sec-pub">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Publications</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div id="pub-entries"></div>
+          <button class="sb-add-btn" onclick="addEntry('publications',{url:'',title:'',subtitle:''})">+ Add Publication</button>
+        </div>
+      </div>
+
+      <!-- Speaking -->
+      <div class="sb-section" id="sec-speaking">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Speaking &amp; Workshops</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div id="speaking-entries"></div>
+          <button class="sb-add-btn" onclick="addEntry('speaking',{title:'',bullets:[]})">+ Add Speaking</button>
+        </div>
+      </div>
+
+      <!-- Languages -->
+      <div class="sb-section" id="sec-lang">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Languages</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div id="lang-entries"></div>
+          <button class="sb-add-btn" onclick="addEntry('languages',{language:'',level:''})">+ Add Language</button>
+        </div>
+      </div>
+
+      <!-- Personal Details -->
+      <div class="sb-section" id="sec-pd">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Personal Details</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div class="sb-field"><label>Date of Birth</label><input type="text" id="f-dob" placeholder="14th August 2000" oninput="upPD('dob',this.value)"></div>
+          <div class="sb-field"><label>Nationality</label><input type="text" id="f-nationality" placeholder="Bangladeshi" oninput="upPD('nationality',this.value)"></div>
+          <div class="sb-field"><label>Marital Status</label><input type="text" id="f-marital" placeholder="Single" oninput="upPD('marital_status',this.value)"></div>
+        </div>
+      </div>
+
+      <!-- Interests -->
+      <div class="sb-section" id="sec-int">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Interests</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div class="tag-input-row">
+            <div class="sb-field" style="flex:1;margin-bottom:0"><input type="text" id="int-input" placeholder="e.g. Reading Books" onkeydown="tagKeydown(event,'interests','int-input')"></div>
+            <button class="tag-add-btn" onclick="addTag('interests','int-input')">Add</button>
+          </div>
+          <div class="tags-display" id="int-tags" style="margin-top:10px;"></div>
+        </div>
+      </div>
+
+      <!-- References -->
+      <div class="sb-section" id="sec-ref">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>References</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div id="ref-entries"></div>
+          <button class="sb-add-btn" onclick="addEntry('references',{name:'',contact:''})">+ Add Reference</button>
+        </div>
+      </div>
+
+      <!-- Extracurricular -->
+      <div class="sb-section" id="sec-extra">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Extracurricular Activities</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div id="extra-entries"></div>
+          <button class="sb-add-btn" onclick="addEntry('extracurricular',{title:'',org:'',period:'',tag:'',bullets:[]})">+ Add Activity</button>
+        </div>
+      </div>
+
+      <!-- Courses -->
+      <div class="sb-section" id="sec-course">
+        <div class="sb-section-header" onclick="toggleSec(this)"><span>Courses</span><span class="chevron">▾</span></div>
+        <div class="sb-section-body">
+          <div id="course-entries"></div>
+          <button class="sb-add-btn" onclick="addEntry('courses',{title:'',provider:''})">+ Add Course</button>
+        </div>
+      </div>
+
+      </div>
+
+      <div id="workspace-templates-panel" class="workspace-panel hidden">
+        <div class="workspace-panel-head">
+          <h3>Template &amp; Style</h3>
+          <p>Switch design instantly. Your content stays the same.</p>
+        </div>
+        <div class="sb-field">
+          <label>Template</label>
+          <select id="tmpl-select" onchange="setTemplate(this.value)">
+            <option value="modern">Modern Professional</option>
+            <option value="classic">Classic Compact</option>
+          </select>
+        </div>
+        <div class="template-cards-row">
+          <button class="template-preset-btn" onclick="setTemplate('modern')">
+            <strong>Modern Professional</strong>
+            <span>Two-column clean style</span>
+          </button>
+          <button class="template-preset-btn" onclick="setTemplate('classic')">
+            <strong>Classic Compact</strong>
+            <span>Traditional ATS-focused style</span>
+          </button>
+        </div>
+        <div class="sb-row" style="margin-top:10px;">
+          <div class="sb-field">
+            <label>Accent Color</label>
+            <input type="color" id="tmpl-accent" value="#00b5bd" onchange="setAccent(this.value)">
+          </div>
+          <div class="sb-field">
+            <label>Density</label>
+            <select id="tmpl-density" onchange="setDensity(this.value)">
+              <option value="normal">Normal</option>
+              <option value="compact">Compact</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="workspace-assistant-panel" class="workspace-panel hidden">
+        <div class="workspace-panel-head">
+          <h3>AI Assistant</h3>
+          <p>Use these smart prompts while editing your resume.</p>
+        </div>
+        <div class="assistant-tip">Improve my summary for a Junior Full Stack role.</div>
+        <div class="assistant-tip">Rewrite my experience bullets with measurable impact.</div>
+        <div class="assistant-tip">Tailor this resume for software engineering internships.</div>
+      </div>
+
+      </div><!-- /sidebar -->
     </div>
+
+    <!-- PREVIEW PANEL -->
+    <div class="preview-panel" id="preview-panel">
+      <div class="page-scaler" id="page-scaler">
+        <div class="resume-sheet" id="live-preview"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- html2pdf.js for client-side PDF generation (no server-side WeasyPrint needed) -->
+<script src="{{ url_for('static', filename='js/html2pdf.bundle.min.js') }}"></script>
+
+<script id="resume-data" type="application/json">{{ resume_json | safe }}</script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-    // hidden inputs + preview elements
-    const inputs = {
-        name: document.getElementById('input-name'),
-        email: document.getElementById('input-email'),
-        summary: document.getElementById('input-summary'),
-        eduTitle: document.getElementById('input-edu-title'),
-        eduPeriod: document.getElementById('input-edu-period'),
-        eduDesc: document.getElementById('input-edu-desc'),
-        expTitle: document.getElementById('input-exp-title'),
-        expPeriod: document.getElementById('input-exp-period'),
-        expDesc: document.getElementById('input-exp-desc'),
-        location: document.getElementById('input-location'),
-        website: document.getElementById('input-website'),
-        softSkills: document.getElementById('input-soft-skills'),
-        skills: document.getElementById('input-skills')
-    };
+// ─────────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────────
+const INITIAL_DATA = JSON.parse(document.getElementById('resume-data').textContent || 'null');
 
-    const preview = {
-        name: document.getElementById('preview-name'),
-        email: document.getElementById('preview-email'),
-        summary: document.getElementById('preview-summary'),
-        eduTitle: document.getElementById('preview-edu-title'),
-        eduPeriod: document.getElementById('preview-edu-period'),
-        eduDesc: document.getElementById('preview-edu-desc'),
-        expTitle: document.getElementById('preview-exp-title'),
-        expPeriod: document.getElementById('preview-exp-period'),
-        expDesc: document.getElementById('preview-exp-desc'),
-        location: document.getElementById('preview-location'),
-        website: document.getElementById('preview-website'),
-        softSkills: document.getElementById('preview-soft-skills'),
-        skillsList: document.getElementById('preview-skills-list'),
-        pdfName: document.getElementById('pdf-name'),
-        pdfEmail: document.getElementById('pdf-email')
-    };
+window.rd = INITIAL_DATA && typeof INITIAL_DATA === 'object' ? INITIAL_DATA : {
+  id: null,
+  personal: { name:'', email:'', phone:'', location:'', linkedin:'', github:'', website:'', summary:'', photo:'' },
+  education: [],
+  experience: [],
+  skills: [],
+  soft_skills: [],
+  achievements: [],
+  publications: [],
+  speaking: [],
+  languages: [],
+  personal_details: { dob:'', nationality:'', marital_status:'' },
+  interests: [],
+  references: [],
+  extracurricular: [],
+  courses: []
+};
 
-    function updateSkills() {
-        const val = inputs.skills.value || '';
-        const parts = val.split(',').map(s=>s.trim()).filter(Boolean);
-        preview.skillsList.innerHTML = '';
-        parts.forEach(p=>{
-            const li = document.createElement('li'); li.textContent = p; preview.skillsList.appendChild(li);
-            attachSkillHandlers(li);
-        });
-    }
+// Ensure nested objects exist
+window.rd.personal = window.rd.personal || {};
+window.rd.personal_details = window.rd.personal_details || {};
+['education','experience','skills','soft_skills','achievements','publications',
+ 'speaking','languages','interests','references','extracurricular','courses'].forEach(k=>{
+  if (!Array.isArray(window.rd[k])) window.rd[k] = [];
+});
+window.rd.meta = Object.assign(
+  { template: 'modern', accent: '#00b5bd', density: 'normal' },
+  window.rd.meta || {}
+);
 
-    function attachSkillHandlers(li){
-        if(!li) return;
-        li.style.cursor = 'text';
-        li.addEventListener('click', function(e){
-            if(li.isContentEditable) return;
-            makeEditable(li);
-            e.stopPropagation();
-        });
-        li.addEventListener('blur', function(){
-            // after editing an li, rebuild skills list
-            setTimeout(()=>{
-                const skills = Array.from(preview.skillsList.querySelectorAll('li')).map(x=>x.textContent.trim()).filter(Boolean);
-                inputs.skills.value = skills.join(', ');
-                sync();
-            }, 10);
-        });
-        li.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); li.blur(); } });
-    }
+// Undo / Redo history
+let history = [deepClone(window.rd)];
+let histIdx = 0;
 
-    function sync() {
-        // ensure hidden inputs reflect preview content (useful on init)
-        if(preview.name) inputs.name.value = preview.name.textContent.trim();
-        if(preview.email) inputs.email.value = preview.email.textContent.replace(/^✉️\s*/, '').trim();
-        if(preview.summary) inputs.summary.value = preview.summary.textContent.trim();
-        if(preview.eduTitle) inputs.eduTitle.value = preview.eduTitle.textContent.trim();
-        if(preview.eduPeriod) inputs.eduPeriod.value = preview.eduPeriod.textContent.trim();
-        if(preview.eduDesc) inputs.eduDesc.value = preview.eduDesc.textContent.trim();
-        if(preview.expTitle) inputs.expTitle.value = preview.expTitle.textContent.trim();
-        if(preview.expPeriod) inputs.expPeriod.value = preview.expPeriod.textContent.trim();
-        if(preview.expDesc) inputs.expDesc.value = preview.expDesc.textContent.trim();
-        // rebuild skills csv from list
-        const skills = Array.from(preview.skillsList.querySelectorAll('li')).map(li=>li.textContent.trim()).filter(Boolean);
-        inputs.skills.value = skills.join(', ');
-        // set PDF hidden fields
-        if(preview.pdfName) preview.pdfName.value = inputs.name.value || '';
-        if(preview.pdfEmail) preview.pdfEmail.value = inputs.email.value || '';
-    }
+function pushHistory() {
+  history = history.slice(0, histIdx + 1);
+  history.push(deepClone(window.rd));
+  histIdx = history.length - 1;
+}
 
-    // initial sync from preview into hidden inputs
-    sync();
+function doUndo() {
+  if (histIdx > 0) { histIdx--; window.rd = deepClone(history[histIdx]); rebuildAll(); }
+}
+function doRedo() {
+  if (histIdx < history.length - 1) { histIdx++; window.rd = deepClone(history[histIdx]); rebuildAll(); }
+}
 
-    // Preview button opens server-rendered preview in a new tab
-    const previewBtn = document.getElementById('toolbar-preview');
-    if (previewBtn) {
-        previewBtn.addEventListener('click', function(){
-        // sync hidden inputs first
-        sync();
-        const form = document.createElement('form');
-        form.method = 'POST'; form.action = '/resume/preview'; form.target = '_blank';
-        ['name','email','summary','edu_title','edu_period','edu_desc','exp_title','exp_period','exp_desc','skills'].forEach(name=>{
-            const el = document.getElementById('input-' + name.replace(/_/g,'-'));
-            const v = el ? el.value : '';
-            const inp = document.createElement('input'); inp.type='hidden'; inp.name=name; inp.value=v; form.appendChild(inp);
-        });
-            document.body.appendChild(form); form.submit(); form.remove();
-        });
-    }
+// ─────────────────────────────────────────────
+//  Helpers
+// ─────────────────────────────────────────────
+function esc(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
+function bullets2text(arr){ return (arr||[]).join('\n'); }
+function text2bullets(t){ return (t||'').split('\n').map(s=>s.trim()).filter(Boolean); }
 
-    // toolbar Save: submit the hidden #editor form after syncing preview -> inputs
-    const toolbarSaveBtn = document.getElementById('toolbar-save-btn');
-    if (toolbarSaveBtn) {
-        toolbarSaveBtn.addEventListener('click', function(e){
-            // populate hidden inputs
-            sync();
-            const editorForm = document.getElementById('editor');
-            if(editorForm){
-                editorForm.submit();
-            }
-        });
-    }
+function showToast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.className = 'toast ' + (isErr ? 'toast-error' : 'toast-success');
+  t.textContent = isErr ? '✗ ' + msg : '✓ ' + msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
 
-    // In-place editing: click any preview element with data-field to edit
-    function makeEditable(el){
-        if(!el) return;
-        el.setAttribute('contenteditable','true');
-        el.classList.add('editing');
-        // move caret to end
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        range.collapse(false);
-        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
-        el.focus();
-    }
+function setStatus(msg){ document.getElementById('save-status').textContent = msg; }
 
-    function finishEdit(el){
-        if(!el) return;
-        el.removeAttribute('contenteditable');
-        el.classList.remove('editing');
-        const field = el.dataset.field;
-        if(!field) return;
-        const val = el.textContent.trim();
-        // map field to input id: input-<field> (replace _ with -)
-        const inputId = 'input-' + field.replace(/_/g,'-');
-        const input = document.getElementById(inputId) || document.querySelector('[name="'+field+'"]');
-        if(field === 'skills'){
-            // parse list items
-            const items = Array.from(el.querySelectorAll('li')).map(li=>li.textContent.trim()).filter(Boolean);
-            const csv = items.length ? items.join(', ') : val;
-            if(input) input.value = csv;
-            // refresh skills list from input
-            inputs.skills.value = csv;
-            updateSkills();
-        } else {
-            if(input) input.value = val;
-            // trigger sync for that specific field
-            sync();
-        }
-    }
+function setValueByPath(obj, path, value){
+  const keys = path.split('.');
+  let target = obj;
+  for(let i=0; i<keys.length-1; i++){
+    const k = keys[i];
+    if (!target[k] || typeof target[k] !== 'object') target[k] = {};
+    target = target[k];
+  }
+  target[keys[keys.length-1]] = value;
+}
 
-    // attach handlers for editable fields (excluding skills list items handled separately)
-    document.querySelectorAll('#live-preview [data-field]').forEach(el=>{
-        if(el.id === 'preview-skills-list') return;
-        el.style.cursor = 'text';
-        el.addEventListener('click', function(e){
-            if(el.isContentEditable) return;
-            makeEditable(el);
-            e.stopPropagation();
-        });
-        el.addEventListener('blur', function(){ finishEdit(el); });
-        el.addEventListener('keydown', function(ev){
-            if(ev.key === 'Enter'){
-                ev.preventDefault();
-                el.blur();
-            } else if(ev.key === 'Escape'){
-                el.blur();
-            }
-        });
+function enableInlineEditing(){
+  const root = document.getElementById('live-preview');
+  if(!root) return;
+
+  root.querySelectorAll('[data-edit-path], [data-entry], [data-bullet]').forEach(el => {
+    if (el.dataset.boundInline === '1') return;
+    el.dataset.boundInline = '1';
+    el.classList.add('inline-editable');
+
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (el.isContentEditable) return;
+      el.contentEditable = 'true';
+      el.classList.add('editing-inline');
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      el.focus();
     });
 
-    // Special handling: allow adding/removing skills by editing the list
-    const skillsList = document.getElementById('preview-skills-list');
-    if(skillsList){
-        // click existing li to edit
-        skillsList.addEventListener('click', function(e){
-            const target = e.target;
-            if(target && target.tagName === 'LI'){
-                if(!target.isContentEditable) makeEditable(target);
-            }
-        });
-        // double-click to create a new skill item
-        skillsList.addEventListener('dblclick', function(e){
-            const li = document.createElement('li'); li.textContent = 'New skill'; skillsList.appendChild(li);
-            attachSkillHandlers(li);
-            makeEditable(li);
-        });
-    }
+    el.addEventListener('keydown', function(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        el.blur();
+      }
+      if(e.key === 'Escape'){
+        e.preventDefault();
+        el.blur();
+      }
+    });
+
+    el.addEventListener('blur', function(){
+      const text = (el.textContent || '').trim();
+      const path = el.dataset.editPath;
+      const section = el.dataset.entry;
+      const idx = el.dataset.idx;
+      const field = el.dataset.field;
+      const bsection = el.dataset.bullet;
+      const bidx = el.dataset.bidx;
+      const bi = el.dataset.bi;
+
+      if(path){
+        setValueByPath(window.rd, path, text);
+      } else if(section !== undefined && idx !== undefined && field){
+        const i = Number(idx);
+        if (Array.isArray(window.rd[section])) {
+          if ((section === 'interests' || section === 'soft_skills') && field === 'value') {
+            window.rd[section][i] = text;
+            window.rd[section] = window.rd[section].filter(Boolean);
+          } else if (window.rd[section][i]) {
+            window.rd[section][i][field] = text;
+          }
+        }
+      } else if(bsection !== undefined && bidx !== undefined && bi !== undefined){
+        const i = Number(bidx);
+        const j = Number(bi);
+        if (Array.isArray(window.rd[bsection]) && window.rd[bsection][i]) {
+          const bullets = window.rd[bsection][i].bullets || [];
+          bullets[j] = text;
+          window.rd[bsection][i].bullets = bullets.filter(Boolean);
+        }
+      }
+
+      el.contentEditable = 'false';
+      el.classList.remove('editing-inline');
+      renderPreview();
+      setStatus('Unsaved changes');
+    });
+  });
+}
+
+function inlineDefaults(section){
+  const map = {
+    education: eduDefaults(),
+    experience: expDefaults(),
+    skills: {category:'Category', items:'Skill 1, Skill 2'},
+    achievements: {title:'Achievement title', subtitle:'Details'},
+    publications: {url:'', title:'Publication title', subtitle:''},
+    speaking: {title:'Speaking title', bullets:['Key point']},
+    languages: {language:'English', level:'Professional'},
+    references: {name:'Reference name', contact:'email@example.com'},
+    extracurricular: {title:'Activity title', org:'Organization', period:'', tag:'', bullets:['Contribution']},
+    courses: {title:'Course title', provider:'Provider'}
+  };
+  return map[section] ? deepClone(map[section]) : { title:'New Item' };
+}
+
+function addInlineEntry(section){
+  addEntry(section, inlineDefaults(section));
+}
+
+function rpEmpty(section, hint){
+  return `<div class="rp-empty"><span>${hint}</span><button class="rp-add-inline-btn" onclick="addInlineEntry('${section}')">+ Add</button></div>`;
+}
+
+function switchWorkspaceTab(tab){
+  const panels = {
+    content: document.getElementById('workspace-content-panel'),
+    templates: document.getElementById('workspace-templates-panel'),
+    assistant: document.getElementById('workspace-assistant-panel')
+  };
+  const buttons = {
+    content: document.getElementById('ws-btn-content'),
+    templates: document.getElementById('ws-btn-templates'),
+    assistant: document.getElementById('ws-btn-assistant')
+  };
+
+  Object.keys(panels).forEach(key => {
+    if (panels[key]) panels[key].classList.toggle('hidden', key !== tab);
+    if (buttons[key]) buttons[key].classList.toggle('active', key === tab);
+  });
+}
+
+function hideTemplateChooser(){
+  const overlay = document.getElementById('template-chooser-overlay');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+function startWithTemplate(templateName){
+  window.rd.meta.template = templateName;
+  hideTemplateChooser();
+  renderPreview();
+  setStatus('Unsaved changes');
+}
+
+function skipTemplateChooser(){
+  hideTemplateChooser();
+}
+
+function setTemplate(val){
+  window.rd.meta.template = val;
+  renderPreview();
+  pushHistory();
+  setStatus('Unsaved changes');
+}
+
+function setAccent(val){
+  window.rd.meta.accent = val;
+  renderPreview();
+  pushHistory();
+  setStatus('Unsaved changes');
+}
+
+function setDensity(val){
+  window.rd.meta.density = val;
+  renderPreview();
+  pushHistory();
+  setStatus('Unsaved changes');
+}
+
+// ─────────────────────────────────────────────
+//  Section toggle
+// ─────────────────────────────────────────────
+function toggleSec(header){
+  header.closest('.sb-section').classList.toggle('open');
+}
+
+// ─────────────────────────────────────────────
+//  Update helpers
+// ─────────────────────────────────────────────
+function upP(field, val){
+  window.rd.personal[field] = val;
+  renderPreview();
+  setStatus('Unsaved changes');
+}
+function upPD(field, val){
+  window.rd.personal_details[field] = val;
+  renderPreview();
+  setStatus('Unsaved changes');
+}
+function upEntry(section, idx, field, val){
+  window.rd[section][idx][field] = val;
+  renderPreview();
+  setStatus('Unsaved changes');
+}
+function upEntryBullets(section, idx, val){
+  window.rd[section][idx].bullets = text2bullets(val);
+  renderPreview();
+  setStatus('Unsaved changes');
+}
+
+// ─────────────────────────────────────────────
+//  Entry management
+// ─────────────────────────────────────────────
+function eduDefaults(){ return {degree:'',institution:'',period:'',cgpa:'',project_label:'',bullets:[]}; }
+function expDefaults(){ return {title:'',company:'',period:'',department:'',bullets:[]}; }
+
+function addEntry(section, defaults){
+  window.rd[section].push(deepClone(defaults));
+  renderSidebarSection(section);
+  renderPreview();
+  pushHistory();
+  setStatus('Unsaved changes');
+}
+
+function removeEntry(section, idx){
+  window.rd[section].splice(idx, 1);
+  renderSidebarSection(section);
+  renderPreview();
+  pushHistory();
+  setStatus('Unsaved changes');
+}
+
+// ─────────────────────────────────────────────
+//  Tag management
+// ─────────────────────────────────────────────
+function tagKeydown(e, section, inputId){
+  if(e.key === 'Enter'){ e.preventDefault(); addTag(section, inputId); }
+}
+function addTag(section, inputId){
+  const el = document.getElementById(inputId);
+  const val = el.value.trim();
+  if(val && !window.rd[section].includes(val)){
+    window.rd[section].push(val);
+    el.value = '';
+    renderTagSection(section);
+    renderPreview();
+    pushHistory();
+    setStatus('Unsaved changes');
+  }
+}
+function removeTag(section, idx){
+  window.rd[section].splice(idx,1);
+  renderTagSection(section);
+  renderPreview();
+  setStatus('Unsaved changes');
+}
+function renderTagSection(section){
+  const containerId = section === 'soft_skills' ? 'soft-tags' : 'int-tags';
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  container.innerHTML = (window.rd[section]||[]).map((t,i)=>`
+    <div class="sb-tag">${esc(t)}<button onclick="removeTag('${section}',${i})">×</button></div>
+  `).join('');
+}
+
+// ─────────────────────────────────────────────
+//  Sidebar section renderers
+// ─────────────────────────────────────────────
+function renderSidebarSection(section){
+  const map = {
+    education: 'edu-entries',
+    experience: 'exp-entries',
+    skills: 'skills-entries',
+    achievements: 'ach-entries',
+    publications: 'pub-entries',
+    speaking: 'speaking-entries',
+    languages: 'lang-entries',
+    references: 'ref-entries',
+    extracurricular: 'extra-entries',
+    courses: 'course-entries'
+  };
+  const containerId = map[section];
+  if(!containerId) return;
+  const el = document.getElementById(containerId);
+  if(!el) return;
+
+  const entries = window.rd[section] || [];
+  el.innerHTML = entries.map((e,i) => renderEntryCard(section, e, i)).join('');
+}
+
+function renderEntryCard(section, e, i){
+  const label = {
+    education:'Education', experience:'Experience', skills:'Skill Category',
+    achievements:'Achievement', publications:'Publication', speaking:'Speaking/Workshop',
+    languages:'Language', references:'Reference', extracurricular:'Activity', courses:'Course'
+  }[section] || 'Entry';
+
+  let fields = '';
+  if(section === 'education'){
+    fields = `
+      <div class="sb-field"><label>Degree / Qualification</label><input type="text" value="${esc(e.degree||'')}" placeholder="B.Sc Computer Science" oninput="upEntry('education',${i},'degree',this.value)"></div>
+      <div class="sb-field"><label>Institution</label><input type="text" value="${esc(e.institution||'')}" placeholder="University Name" oninput="upEntry('education',${i},'institution',this.value)"></div>
+      <div class="sb-row">
+        <div class="sb-field"><label>Period</label><input type="text" value="${esc(e.period||'')}" placeholder="01/2020 - 05/2024" oninput="upEntry('education',${i},'period',this.value)"></div>
+        <div class="sb-field"><label>CGPA / Grade</label><input type="text" value="${esc(e.cgpa||'')}" placeholder="3.48 CGPA" oninput="upEntry('education',${i},'cgpa',this.value)"></div>
+      </div>
+      <div class="sb-field"><label>Project Label</label><input type="text" value="${esc(e.project_label||'')}" placeholder="Final Year Project" oninput="upEntry('education',${i},'project_label',this.value)"></div>
+      <div class="sb-field"><label>Bullet Points (one per line)</label><textarea placeholder="Integrated ChatGPT..." oninput="upEntryBullets('education',${i},this.value)">${esc(bullets2text(e.bullets))}</textarea></div>`;
+  } else if(section === 'experience'){
+    fields = `
+      <div class="sb-field"><label>Job Title</label><input type="text" value="${esc(e.title||'')}" placeholder="Sr. Sales & IT Executive" oninput="upEntry('experience',${i},'title',this.value)"></div>
+      <div class="sb-field"><label>Company</label><input type="text" value="${esc(e.company||'')}" placeholder="TCL Global" oninput="upEntry('experience',${i},'company',this.value)"></div>
+      <div class="sb-row">
+        <div class="sb-field"><label>Period</label><input type="text" value="${esc(e.period||'')}" placeholder="02/2025 - Present" oninput="upEntry('experience',${i},'period',this.value)"></div>
+        <div class="sb-field"><label>Department</label><input type="text" value="${esc(e.department||'')}" placeholder="Global Operation Team" oninput="upEntry('experience',${i},'department',this.value)"></div>
+      </div>
+      <div class="sb-field"><label>Responsibilities (one per line)</label><textarea placeholder="Oversee CRM..." oninput="upEntryBullets('experience',${i},this.value)">${esc(bullets2text(e.bullets))}</textarea></div>`;
+  } else if(section === 'skills'){
+    fields = `
+      <div class="sb-field"><label>Category</label><input type="text" value="${esc(e.category||'')}" placeholder="Programming Language" oninput="upEntry('skills',${i},'category',this.value)"></div>
+      <div class="sb-field"><label>Items (comma-separated)</label><input type="text" value="${esc(e.items||'')}" placeholder="Python, JavaScript, SQL" oninput="upEntry('skills',${i},'items',this.value)"></div>`;
+  } else if(section === 'achievements'){
+    fields = `
+      <div class="sb-field"><label>Title</label><input type="text" value="${esc(e.title||'')}" placeholder="2nd Runner Up..." oninput="upEntry('achievements',${i},'title',this.value)"></div>
+      <div class="sb-field"><label>Subtitle / Details</label><input type="text" value="${esc(e.subtitle||'')}" placeholder="CSE Project Show | ..." oninput="upEntry('achievements',${i},'subtitle',this.value)"></div>`;
+  } else if(section === 'publications'){
+    fields = `
+      <div class="sb-field"><label>URL</label><input type="text" value="${esc(e.url||'')}" placeholder="https://..." oninput="upEntry('publications',${i},'url',this.value)"></div>
+      <div class="sb-field"><label>Title</label><input type="text" value="${esc(e.title||'')}" placeholder="ReFIN: ..." oninput="upEntry('publications',${i},'title',this.value)"></div>
+      <div class="sb-field"><label>Subtitle</label><input type="text" value="${esc(e.subtitle||'')}" placeholder="2024 27th International..." oninput="upEntry('publications',${i},'subtitle',this.value)"></div>`;
+  } else if(section === 'speaking'){
+    fields = `
+      <div class="sb-field"><label>Title</label><input type="text" value="${esc(e.title||'')}" placeholder="Workshop" oninput="upEntry('speaking',${i},'title',this.value)"></div>
+      <div class="sb-field"><label>Details (one per line)</label><textarea oninput="upEntryBullets('speaking',${i},this.value)">${esc(bullets2text(e.bullets))}</textarea></div>`;
+  } else if(section === 'languages'){
+    fields = `
+      <div class="sb-row">
+        <div class="sb-field"><label>Language</label><input type="text" value="${esc(e.language||'')}" placeholder="English" oninput="upEntry('languages',${i},'language',this.value)"></div>
+        <div class="sb-field"><label>Proficiency</label><input type="text" value="${esc(e.level||'')}" placeholder="Professional" oninput="upEntry('languages',${i},'level',this.value)"></div>
+      </div>`;
+  } else if(section === 'references'){
+    fields = `
+      <div class="sb-field"><label>Name & Role</label><input type="text" value="${esc(e.name||'')}" placeholder="Mehfujul Wadood (Manager)" oninput="upEntry('references',${i},'name',this.value)"></div>
+      <div class="sb-field"><label>Contact</label><input type="text" value="${esc(e.contact||'')}" placeholder="email - phone" oninput="upEntry('references',${i},'contact',this.value)"></div>`;
+  } else if(section === 'extracurricular'){
+    fields = `
+      <div class="sb-field"><label>Title / Role</label><input type="text" value="${esc(e.title||'')}" placeholder="Head of Public Relations" oninput="upEntry('extracurricular',${i},'title',this.value)"></div>
+      <div class="sb-field"><label>Organization</label><input type="text" value="${esc(e.org||'')}" placeholder="UIU Computer Club" oninput="upEntry('extracurricular',${i},'org',this.value)"></div>
+      <div class="sb-row">
+        <div class="sb-field"><label>Period</label><input type="text" value="${esc(e.period||'')}" placeholder="05/2022 - 06/2023" oninput="upEntry('extracurricular',${i},'period',this.value)"></div>
+        <div class="sb-field"><label>Sub-label</label><input type="text" value="${esc(e.tag||'')}" placeholder="Skills" oninput="upEntry('extracurricular',${i},'tag',this.value)"></div>
+      </div>
+      <div class="sb-field"><label>Bullet Points (one per line)</label><textarea oninput="upEntryBullets('extracurricular',${i},this.value)">${esc(bullets2text(e.bullets))}</textarea></div>`;
+  } else if(section === 'courses'){
+    fields = `
+      <div class="sb-field"><label>Course Title</label><input type="text" value="${esc(e.title||'')}" placeholder="Linux Fundamentals (RH104)" oninput="upEntry('courses',${i},'title',this.value)"></div>
+      <div class="sb-field"><label>Provider</label><input type="text" value="${esc(e.provider||'')}" placeholder="By Red Hat Training" oninput="upEntry('courses',${i},'provider',this.value)"></div>`;
+  }
+
+  return `<div class="entry-card">
+    <div class="entry-card-header">
+      <span class="entry-card-title">${label} ${i + 1}</span>
+      <button class="entry-remove-btn" onclick="removeEntry('${section}',${i})" title="Remove">✕</button>
+    </div>${fields}</div>`;
+}
+
+// ─────────────────────────────────────────────
+//  Photo upload
+// ─────────────────────────────────────────────
+async function uploadPhoto(input){
+  const file = input.files[0];
+  if(!file) return;
+  const fd = new FormData();
+  fd.append('photo', file);
+  const res = await fetch('/resume/upload-photo', {method:'POST', body:fd});
+  if(res.ok){
+    const json = await res.json();
+    window.rd.personal.photo = json.filename;
+    const img = document.getElementById('photo-preview-img');
+    img.src = '/photos/' + json.filename;
+    img.style.display = 'block';
+    document.getElementById('photo-hint').style.display = 'none';
+    renderPreview();
+    setStatus('Unsaved changes');
+  } else {
+    showToast('Photo upload failed', true);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Live Preview Renderer
+// ─────────────────────────────────────────────
+function renderPreview(){
+  const rd = window.rd;
+  const target = document.getElementById('live-preview');
+  const p = rd.personal || {};
+
+  target.style.setProperty('--teal', rd.meta.accent || '#00b5bd');
+  target.classList.remove('density-compact');
+  if (rd.meta.density === 'compact') target.classList.add('density-compact');
+
+  if ((rd.meta.template || 'modern') === 'classic') {
+    target.innerHTML = cpTemplate(rd);
+  } else {
+    target.innerHTML = rpHeader(p) + rpContactBar(p) + rpBody(rd) + rpFooter();
+  }
+
+  enableInlineEditing();
+
+  // Re-scale after DOM update so new content height is measured correctly
+  setTimeout(fitPreview, 0);
+}
+
+function cpSection(title, content){
+  if(!content) return '';
+  return `<div class="cp-section"><div class="cp-section-title">${title}</div>${content}</div>`;
+}
+
+function cpBullets(arr){
+  if(!arr || !arr.length) return '';
+  return `<ul class="cp-bullets">${arr.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>`;
+}
+
+function cpTemplate(rd){
+  const p = rd.personal || {};
+  const exp = (rd.experience || []).map(e=>`
+    <div class="cp-item">
+      <div class="cp-item-head"><strong>${esc(e.title || '')}</strong><span>${esc(e.period || '')}</span></div>
+      <div class="cp-sub">${esc(e.company || '')}${e.department ? ` | ${esc(e.department)}` : ''}</div>
+      ${cpBullets(e.bullets)}
+    </div>
+  `).join('');
+
+  const edu = (rd.education || []).map(e=>`
+    <div class="cp-item">
+      <div class="cp-item-head"><strong>${esc(e.degree || '')}</strong><span>${esc(e.period || '')}</span></div>
+      <div class="cp-sub">${esc(e.institution || '')}${e.cgpa ? ` | GPA ${esc(e.cgpa)}` : ''}</div>
+      ${e.project_label ? `<div class="cp-note">${esc(e.project_label)}</div>` : ''}
+      ${cpBullets(e.bullets)}
+    </div>
+  `).join('');
+
+  const projects = (rd.extracurricular || []).map(e=>`
+    <div class="cp-item">
+      <div class="cp-item-head"><strong>${esc(e.title || '')}</strong><span>${esc(e.period || '')}</span></div>
+      <div class="cp-sub">${esc(e.org || '')}</div>
+      ${cpBullets(e.bullets)}
+    </div>
+  `).join('');
+
+  const skills = (rd.skills || []).map(s=>`<div class="cp-skill-row"><strong>${esc(s.category || '')}</strong>${s.category ? ': ' : ''}${esc(s.items || '')}</div>`).join('');
+  const langs = (rd.languages || []).map(l=>`<div>${esc(l.language || '')}${l.level ? ` (${esc(l.level)})` : ''}</div>`).join('');
+  const refs = (rd.references || []).map(r=>`<div class="cp-ref"><strong>${esc(r.name || '')}</strong><div>${esc(r.contact || '')}</div></div>`).join('');
+  const contact = [p.phone, p.email, p.location, p.linkedin, p.github, p.website].filter(Boolean).map(esc).join(' | ');
+
+  const avatar = p.photo ? `<img src="/photos/${esc(p.photo)}" alt="avatar">` : `<div class="cp-avatar-fallback">Photo</div>`;
+
+  return `
+    <div class="cp-wrap">
+      <div class="cp-header">
+        <div class="cp-head-main">
+          <div class="cp-name">${esc(p.name || 'Your Name')}</div>
+          <div class="cp-contact">${contact || 'Add contact information'}</div>
+          ${p.summary ? `<p class="cp-summary">${esc(p.summary)}</p>` : ''}
+        </div>
+        <div class="cp-avatar">${avatar}</div>
+      </div>
+
+      <div class="cp-body">
+        <aside class="cp-left">
+          ${cpSection('Core Skills', skills)}
+          ${cpSection('Languages', langs)}
+          ${cpSection('References', refs)}
+          ${cpSection('Achievements', (rd.achievements || []).map(a => `<div class="cp-item"><strong>${esc(a.title || '')}</strong><div class="cp-sub">${esc(a.subtitle || '')}</div></div>`).join(''))}
+        </aside>
+        <main class="cp-right">
+          ${cpSection('Work Experience', exp)}
+          ${cpSection('Education', edu)}
+          ${cpSection('Projects & Activities', projects)}
+          ${cpSection('Publications', (rd.publications || []).map(pu => `<div class="cp-item"><strong>${esc(pu.title || '')}</strong><div class="cp-sub">${esc(pu.subtitle || '')}</div>${pu.url ? `<div class="cp-note">${esc(pu.url)}</div>` : ''}</div>`).join(''))}
+        </main>
+      </div>
+
+      <div class="cp-footer">Template: Classic Compact</div>
+    </div>
+  `;
+}
+
+function rpHeader(p){
+  const avatar = p.photo
+    ? `<div class="rp-avatar"><img src="/photos/${esc(p.photo)}" alt="avatar"></div>`
+    : `<div class="rp-avatar"><span class="rp-avatar-icon">👤</span></div>`;
+  return `<div class="rp-header"><div class="rp-header-content"><div>
+    <div class="rp-name" data-edit-path="personal.name">${esc(p.name || 'Your Name')}</div>
+    <p class="rp-summary" data-edit-path="personal.summary">${esc(p.summary || 'Write a short and engaging professional summary here.')}</p>
+  </div>${avatar}</div></div>`;
+}
+
+function rpContactBar(p){
+  const items = [
+    `<div class="rp-contact-item"><span class="ci-icon">✉</span><span data-edit-path="personal.email">${esc(p.email || 'you@email.com')}</span></div>`,
+    `<div class="rp-contact-item"><span class="ci-icon">📱</span><span data-edit-path="personal.phone">${esc(p.phone || 'Phone Number')}</span></div>`,
+    `<div class="rp-contact-item"><span class="ci-icon">📍</span><span data-edit-path="personal.location">${esc(p.location || 'City, Country')}</span></div>`,
+    `<div class="rp-contact-item"><span class="ci-icon">in</span><span data-edit-path="personal.linkedin">${esc(p.linkedin || 'linkedin.com/in/you')}</span></div>`,
+    `<div class="rp-contact-item"><span class="ci-icon">⌥</span><span data-edit-path="personal.github">${esc(p.github || 'github.com/you')}</span></div>`,
+    `<div class="rp-contact-item"><span class="ci-icon">🔗</span><span data-edit-path="personal.website">${esc(p.website || 'portfolio.example.com')}</span></div>`,
+  ];
+  return `<div class="rp-contact-bar">${items.join('')}</div>`;
+}
+
+function rpSection(title, content){
+  if(!content) return '';
+  return `<div class="rp-section"><div class="rp-section-title">${title}</div>${content}</div>`;
+}
+
+function rpBullets(bullets){
+  const section = arguments.length > 1 ? arguments[1] : null;
+  const entryIndex = arguments.length > 2 ? arguments[2] : null;
+  if(!bullets || !bullets.length) return '';
+  return `<ul class="rp-bullets">${bullets.map((b, bi)=>`<li ${section!==null?`data-bullet="${section}" data-bidx="${entryIndex}" data-bi="${bi}"`:''}>${esc(b)}</li>`).join('')}</ul>`;
+}
+
+function rpBody(rd){
+  const left = [
+    rpEducation(rd.education||[]),
+    rpExperience(rd.experience||[]),
+    rpExtracurricular(rd.extracurricular||[]),
+    rpCourses(rd.courses||[]),
+    rpReferences(rd.references||[])
+  ].join('');
+  const right = [
+    rpSkills(rd.skills||[]),
+    rpSoftSkills(rd.soft_skills||[]),
+    rpAchievements(rd.achievements||[]),
+    rpPublications(rd.publications||[]),
+    rpSpeaking(rd.speaking||[]),
+    rpLanguages(rd.languages||[]),
+    rpPersonalDetails(rd.personal_details||{}),
+    rpInterests(rd.interests||[])
+  ].join('');
+  return `<div class="rp-body"><div class="rp-col-left">${left}</div><div class="rp-col-right">${right}</div></div>`;
+}
+
+function rpEducation(edu){
+  if(!edu.length) return rpSection('Education', rpEmpty('education', 'No education added yet.'));
+  const items = edu.map((e, i)=>`<div class="edu-editor-block">
+    <div class="edu-main-title" data-entry="education" data-idx="${i}" data-field="degree">${esc(e.degree || 'Study Program')}</div>
+    <div class="edu-sub-title" data-entry="education" data-idx="${i}" data-field="institution">${esc(e.institution || 'Institution/Place of Education')}</div>
+
+    <div class="edu-period-row">
+      <span class="edu-period" data-entry="education" data-idx="${i}" data-field="period">${esc(e.period || 'mm / yyyy  -  mm / yyyy')}</span>
+      <label class="edu-present"><input type="checkbox" disabled> Present</label>
+    </div>
+
+    <div class="edu-note" data-entry="education" data-idx="${i}" data-field="cgpa">${esc(e.cgpa || 'City, Country or GPA (optional)')}</div>
+
+    <div class="edu-courses-label" data-entry="education" data-idx="${i}" data-field="project_label">${esc(e.project_label || 'Courses')}</div>
+
+    <div class="edu-bullets-line">
+      ${(e.bullets && e.bullets.length)
+        ? e.bullets.map((b, bi)=>`<div class="edu-bullet-item" data-bullet="education" data-bidx="${i}" data-bi="${bi}">• ${esc(b)}</div>`).join('')
+        : `<div class="edu-bullet-item" data-entry="education" data-idx="${i}" data-field="project_label">• Course/Thesis/Project</div>`}
+    </div>
+
+    <div class="edu-add-row">
+      <button class="edu-add-btn" onclick="addInlineEntry('education')">+</button>
+      <div class="edu-dash-line"></div>
+      <span class="edu-dot-end"></span>
+    </div>
+  </div>`).join('');
+  return rpSection('Education', items);
+}
+
+function rpExperience(exp){
+  if(!exp.length) return rpSection('Work Experience', rpEmpty('experience', 'No work experience added yet.'));
+  const items = exp.map(e=>`<div class="rp-entry">
+    <div class="rp-item-title" data-entry="experience" data-idx="${exp.indexOf(e)}" data-field="title">${esc(e.title)}</div>
+    <div class="rp-item-org" data-entry="experience" data-idx="${exp.indexOf(e)}" data-field="company">${esc(e.company)}</div>
+    <div class="rp-item-period" data-entry="experience" data-idx="${exp.indexOf(e)}" data-field="period">${esc(e.period)}</div>
+    ${e.department?`<div class="rp-item-dept" data-entry="experience" data-idx="${exp.indexOf(e)}" data-field="department">${esc(e.department)}</div>`:''}
+    ${rpBullets(e.bullets, 'experience', exp.indexOf(e))}
+  </div>`).join('');
+  return rpSection('Work Experience', items);
+}
+
+function rpSkills(skills){
+  if(!skills.length) return rpSection('Skills Inventory', rpEmpty('skills', 'No skills added yet.'));
+  const items = skills.map((s, i)=>`<div class="rp-skill-entry"><span class="rp-skill-cat" data-entry="skills" data-idx="${i}" data-field="category">${esc(s.category)}${s.category?':':''}</span><span class="rp-skill-items" data-entry="skills" data-idx="${i}" data-field="items"> ${esc(s.items)}</span></div>`).join('');
+  return rpSection('Skills Inventory', items);
+}
+
+function rpSoftSkills(tags){
+  if(!tags.length) return '';
+  return rpSection('Soft Skills', `<div class="rp-tags">${tags.map(t=>`<span class="rp-tag">${esc(t)}</span>`).join('')}</div>`);
+}
+
+function rpAchievements(ach){
+  if(!ach.length) return rpSection('Achievements &amp; Awards', rpEmpty('achievements', 'No achievements added yet.'));
+  const items = ach.map((a, i)=>`<div class="rp-entry"><div class="rp-item-title" data-entry="achievements" data-idx="${i}" data-field="title">${esc(a.title)}</div>${a.subtitle?`<div class="rp-pub-sub" data-entry="achievements" data-idx="${i}" data-field="subtitle">${esc(a.subtitle)}</div>`:''}</div>`).join('');
+  return rpSection('Achievements &amp; Awards', items);
+}
+
+function rpPublications(pubs){
+  if(!pubs.length) return rpSection('Publications', rpEmpty('publications', 'No publications added yet.'));
+  const items = pubs.map((p, i)=>`<div class="rp-entry">
+    ${p.url?`<div class="rp-pub-url" data-entry="publications" data-idx="${i}" data-field="url">${esc(p.url)}</div>`:''}
+    <div class="rp-pub-title" data-entry="publications" data-idx="${i}" data-field="title">${esc(p.title)}</div>
+    ${p.subtitle?`<div class="rp-pub-sub" data-entry="publications" data-idx="${i}" data-field="subtitle">${esc(p.subtitle)}</div>`:''}
+  </div>`).join('');
+  return rpSection('Publications', items);
+}
+
+function rpSpeaking(speaking){
+  if(!speaking.length) return rpSection('Speaking &amp; Workshops', rpEmpty('speaking', 'No speaking items added yet.'));
+  const items = speaking.map((s, i)=>`<div class="rp-entry"><div class="rp-item-title" data-entry="speaking" data-idx="${i}" data-field="title">${esc(s.title)}</div>${rpBullets(s.bullets, 'speaking', i)}</div>`).join('');
+  return rpSection('Speaking &amp; Workshops', items);
+}
+
+function rpLanguages(langs){
+  if(!langs.length) return rpSection('Languages', rpEmpty('languages', 'No languages added yet.'));
+  const pairs = langs.map((l, i)=>`<div><div class="rp-lang-name" data-entry="languages" data-idx="${i}" data-field="language">${esc(l.language)}</div><div class="rp-lang-level" data-entry="languages" data-idx="${i}" data-field="level">${esc(l.level)}</div></div>`).join('');
+  return rpSection('Languages', `<div class="rp-lang-grid">${pairs}</div>`);
+}
+
+function rpPersonalDetails(pd){
+  const parts = [
+    pd.dob ? `<div class="rp-personal-detail">Date of Birth: <span data-edit-path="personal_details.dob">${esc(pd.dob)}</span></div>` : '',
+    pd.nationality ? `<div class="rp-personal-detail">Nationality: <span data-edit-path="personal_details.nationality">${esc(pd.nationality)}</span></div>` : '',
+    pd.marital_status ? `<div class="rp-personal-detail">Marital Status: <span data-edit-path="personal_details.marital_status">${esc(pd.marital_status)}</span></div>` : ''
+  ].filter(Boolean).join('');
+  return parts ? rpSection('Personal Details', parts) : '';
+}
+
+function rpInterests(interests){
+  if(!interests.length) return '';
+  return rpSection('Interests', `<div class="rp-tags">${interests.map((t, i)=>`<span class="rp-tag" data-entry="interests" data-idx="${i}" data-field="value">${esc(t)}</span>`).join('')}</div>`);
+}
+
+function rpExtracurricular(extra){
+  if(!extra.length) return rpSection('Extracurricular Activities', rpEmpty('extracurricular', 'No activities added yet.'));
+  const items = extra.map((e, i)=>`<div class="rp-entry">
+    <div class="rp-item-title" data-entry="extracurricular" data-idx="${i}" data-field="title">${esc(e.title)}</div>
+    <div class="rp-item-org" data-entry="extracurricular" data-idx="${i}" data-field="org">${esc(e.org)}</div>
+    ${e.period?`<div class="rp-item-period" data-entry="extracurricular" data-idx="${i}" data-field="period">${esc(e.period)}</div>`:''}
+    ${e.tag?`<div class="rp-item-label" data-entry="extracurricular" data-idx="${i}" data-field="tag">${esc(e.tag)}</div>`:''}
+    ${rpBullets(e.bullets, 'extracurricular', i)}
+  </div>`).join('');
+  return rpSection('Extracurricular Activities', items);
+}
+
+function rpCourses(courses){
+  if(!courses.length) return rpSection('Course', rpEmpty('courses', 'No courses added yet.'));
+  const items = courses.map((c, i)=>`<div class="rp-entry"><div class="rp-item-title" data-entry="courses" data-idx="${i}" data-field="title">${esc(c.title)}</div><div class="rp-item-dept" data-entry="courses" data-idx="${i}" data-field="provider">${esc(c.provider)}</div></div>`).join('');
+  return rpSection('Course', items);
+}
+
+function rpReferences(refs){
+  if(!refs.length) return rpSection('References', rpEmpty('references', 'No references added yet.'));
+  const items = refs.map((r, i)=>`<div class="rp-entry"><div class="rp-ref-name" data-entry="references" data-idx="${i}" data-field="name">${esc(r.name)}</div>${r.contact?`<div class="rp-ref-contact">Contact: <span data-entry="references" data-idx="${i}" data-field="contact">${esc(r.contact)}</span></div>`:''}</div>`).join('');
+  return rpSection('References', items);
+}
+
+function rpFooter(){
+  return `<div class="rp-footer">Page 1 of 1</div>`;
+}
+
+// ─────────────────────────────────────────────
+//  Populate sidebar from loaded resume
+// ─────────────────────────────────────────────
+function populateSidebar(){
+  const p = window.rd.personal || {};
+  const setVal = (id, val) => { const el=document.getElementById(id); if(el) el.value = val||''; };
+  setVal('f-name', p.name);
+  setVal('f-summary', p.summary);
+  setVal('f-email', p.email);
+  setVal('f-phone', p.phone);
+  setVal('f-location', p.location);
+  setVal('f-linkedin', p.linkedin);
+  setVal('f-github', p.github);
+  setVal('f-website', p.website);
+
+  // Photo
+  if(p.photo){
+    const img = document.getElementById('photo-preview-img');
+    img.src = '/photos/' + p.photo;
+    img.style.display = 'block';
+    document.getElementById('photo-hint').style.display = 'none';
+  }
+
+  // Personal details
+  const pd = window.rd.personal_details || {};
+  setVal('f-dob', pd.dob);
+  setVal('f-nationality', pd.nationality);
+  setVal('f-marital', pd.marital_status);
+
+  // Template settings
+  setVal('tmpl-select', window.rd.meta.template);
+  setVal('tmpl-density', window.rd.meta.density);
+  const accentPicker = document.getElementById('tmpl-accent');
+  if (accentPicker) accentPicker.value = window.rd.meta.accent || '#00b5bd';
+
+  // Render all entry-based sections
+  ['education','experience','skills','achievements','publications','speaking',
+   'languages','references','extracurricular','courses'].forEach(renderSidebarSection);
+
+  // Tags
+  renderTagSection('soft_skills');
+  renderTagSection('interests');
+}
+
+// Rebuild sidebar + preview after undo/redo
+function rebuildAll(){
+  populateSidebar();
+  renderPreview();
+}
+
+// ─────────────────────────────────────────────
+//  Save
+// ─────────────────────────────────────────────
+async function saveResume(){
+  setStatus('Saving...');
+  const res = await fetch('/resume/save', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(window.rd)
+  });
+  if(res.ok){
+    const data = await res.json();
+    window.rd.id = data.id;
+    pushHistory();
+    setStatus('');
+    showToast('Resume saved successfully!');
+  } else {
+    setStatus('Save failed');
+    showToast('Failed to save resume', true);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Download PDF  (client-side via html2pdf.js)
+// ─────────────────────────────────────────────
+async function downloadPDF(){
+  const el = document.getElementById('live-preview');
+  const name = (window.rd.personal?.name || 'resume').replace(/\s+/g,'_');
+
+  // Hide page-break gradient lines during capture
+  el.classList.add('no-page-lines');
+
+  const btn = document.querySelector('.tb-btn-download');
+  if(btn){ btn.textContent = 'Generating…'; btn.disabled = true; }
+
+  const opt = {
+    margin:      0,
+    filename:    name + '.pdf',
+    image:       { type:'jpeg', quality:0.97 },
+    html2canvas: { scale:2, useCORS:true, logging:false, backgroundColor:'#ffffff' },
+    jsPDF:       { unit:'mm', format:'a4', orientation:'portrait' },
+    pagebreak:   { mode:['avoid-all','css','legacy'], avoid:['.rp-section','.rp-entry','.cp-section','.cp-item'] }
+  };
+
+  try {
+    await html2pdf().set(opt).from(el).save();
+  } catch(err) {
+    showToast('PDF failed: ' + err.message, true);
+  } finally {
+    el.classList.remove('no-page-lines');
+    if(btn){ btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:#fff"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 8h14v2H5z"/></svg> Download PDF'; btn.disabled = false; }
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Auto-scale A4 preview to fit panel (Novoresume-style)
+// ─────────────────────────────────────────────
+function fitPreview() {
+  const panel   = document.getElementById('preview-panel');
+  const scaler  = document.getElementById('page-scaler');
+  if (!panel || !scaler) return;
+
+  const A4_W    = 794;                              // A4 width at 96dpi
+  const padding = 48;                               // 24px each side
+  const avail   = panel.clientWidth - padding;
+  const scale   = Math.min(1, avail / A4_W);        // never zoom >100%
+
+  scaler.style.transform = `scale(${scale})`;
+  scaler.style.transformOrigin = 'top center';
+
+  // CSS transform doesn't change layout flow, so we compensate the height
+  // so the panel scrolls correctly for multi-page content
+  const natural = scaler.scrollHeight;
+  const diff    = natural * scale - natural;        // negative = shrinking
+  scaler.style.marginBottom = diff + 'px';
+}
+
+window.addEventListener('resize', fitPreview);
+
+// ─────────────────────────────────────────────
+//  Init
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function(){
+  switchWorkspaceTab('content');
+
+  const ws = document.querySelector('.workspace-shell');
+  if (ws) ws.classList.add('hidden');
+
+  populateSidebar();
+  renderPreview();
+  fitPreview();
+
+  // Show chooser only on new resume landing flow.
+  if (!window.rd.id) {
+    const overlay = document.getElementById('template-chooser-overlay');
+    if (overlay) overlay.classList.remove('hidden');
+  } else {
+    hideTemplateChooser();
+  }
 });
 </script>
 {% endblock %}

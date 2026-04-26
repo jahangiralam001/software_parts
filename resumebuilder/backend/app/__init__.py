@@ -12,6 +12,8 @@ def create_app():
         template_folder=template_dir,
         static_folder=static_dir
     )
+    # Disable static file caching so CSS/JS changes are always picked up
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
     from .routes import main
     app.register_blueprint(main)

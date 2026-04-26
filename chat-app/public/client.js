@@ -884,12 +884,29 @@ const callingOverlay    = document.getElementById('callingOverlay');
 const remoteVideo       = document.getElementById('remoteVideo');
 const relayVideoImg     = document.getElementById('relayVideoImg');
 const relayBadge        = document.getElementById('relayBadge');
+const callModeBadge     = document.getElementById('callModeBadge');
 const localVideo        = document.getElementById('localVideo');
 const videoCallDurEl    = document.getElementById('videoCallDuration');
 const videoMuteAudioBtn = document.getElementById('videoMuteAudioBtn');
 const videoMuteVideoBtn = document.getElementById('videoMuteVideoBtn');
 const videoEndCallBtn   = document.getElementById('videoEndCallBtn');
+
 const cancelCallBtn     = document.getElementById('cancelCallBtn');
+
+if (relayVideoImg) {
+    // If a relay JPEG cannot decode, immediately fall back to WebRTC video layer.
+    relayVideoImg.addEventListener('error', () => {
+        relayVideoImg.classList.add('hidden');
+        relayVideoImg.src = '';
+        if (remoteVideo) remoteVideo.style.display = '';
+        relayFrameReceived = false;
+    });
+}
+
+function setCallModeBadge(text) {
+    if (!callModeBadge) return;
+    callModeBadge.textContent = text;
+}
 
 // ── Peer Connection ──────────────────────────────────────────────
 async function createPeerConnection() {
@@ -906,19 +923,27 @@ async function createPeerConnection() {
     // <audio> element guarantees speaker output on iOS and Android.
     peerConnection.ontrack = (event) => {
         const track = event.track;
+        const incomingStream = event.streams && event.streams[0] ? event.streams[0] : null;
 
         if (track.kind === 'audio') {
             // Always route remote audio through dedicated <audio> element
-            const audioStream = new MediaStream([track]);
+            const audioStream = incomingStream || new MediaStream([track]);
             remoteAudio.srcObject = audioStream;
             remoteAudio.play().catch(e => console.warn('Remote audio play:', e));
 
         } else if (track.kind === 'video' && callType === 'video') {
             // Route video track to <video> element (muted — audio is handled above)
-            const videoStream = new MediaStream([track]);
+            const videoStream = incomingStream || new MediaStream([track]);
             remoteVideo.srcObject = videoStream;
+            remoteVideo.style.display = '';
+            if (relayVideoImg) {
+                relayVideoImg.classList.add('hidden');
+                relayVideoImg.src = '';
+            }
+            relayFrameReceived = false;
             remoteVideo.muted = true;
             remoteVideo.play().catch(e => console.warn('Remote video play:', e));
+            setCallModeBadge('Direct video');
         }
     };
 
@@ -1084,6 +1109,7 @@ function endCall(notifyPeer = true) {
     muteBtn.classList.remove('muted');
     videoMuteAudioBtn.classList.remove('muted');
     videoMuteVideoBtn.classList.remove('camera-off');
+    setCallModeBadge('Connecting...');
 
     // ── Call log: emit to server (persisted + broadcast to both sides) ──
     if (prevState === 'idle') return;
@@ -1148,9 +1174,18 @@ function showConnectedUI() {
     callingOverlay.classList.add('hidden');
 
     if (callType === 'video') {
+        // Reset remote layer state each time video UI is entered.
+        if (remoteVideo) remoteVideo.style.display = '';
+        if (relayVideoImg) {
+            relayVideoImg.classList.add('hidden');
+            relayVideoImg.src = '';
+        }
+        relayFrameReceived = false;
+
         localVideo.srcObject = localStream;
         videoCallOverlay.classList.remove('hidden');
         videoCallBtn.classList.add('in-call');
+        setCallModeBadge('Connecting...');
         requestAnimationFrame(() => {
             localVideo.play().catch(e => console.warn('Local video play:', e));
             if (remoteVideo.srcObject) {
@@ -1211,6 +1246,7 @@ async function startRelayMode() {
     if (callRelayMode) return;
     callRelayMode = true;
     console.info('🔀 WebRTC P2P failed — switching to Socket.IO server relay');
+    setCallModeBadge('Relay mode');
 
     // ── Audio capture via Web Audio API ───────────────────────────
     if (localStream && localStream.getAudioTracks().length) {
@@ -1281,6 +1317,7 @@ function cleanupRelay() {
     if (relayVideoImg)  { relayVideoImg.classList.add('hidden'); relayVideoImg.src = ''; }
     if (relayBadge)     relayBadge.classList.add('hidden');
     if (remoteVideo)    remoteVideo.style.display = '';
+    setCallModeBadge('Direct video');
 }
 
 // ── Relay receivers ───────────────────────────────────────────────────
@@ -1321,6 +1358,7 @@ socket.on('relay-audio', (pcmBuffer) => {
 
 socket.on('relay-video', (jpeg) => {
     if (callState === 'idle') return;
+    if (!callRelayMode) return;
     if (!relayVideoImg || typeof jpeg !== 'string') return;
     // Ignore malformed frames so we don't switch to a broken image on mobile.
     if (!jpeg.startsWith('data:image/jpeg') || jpeg.length < 128) return;
@@ -1331,6 +1369,7 @@ socket.on('relay-video', (jpeg) => {
     if (!relayFrameReceived) {
         relayFrameReceived = true;
         remoteVideo.style.display = 'none'; // hide WebRTC video only after first valid relay frame
+        setCallModeBadge('Relay video');
     }
 });
 

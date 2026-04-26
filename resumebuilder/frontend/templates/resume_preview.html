@@ -1,74 +1,227 @@
 {% extends "base.html" %}
-
-{% block title %}Resume Preview{% endblock %}
+{% block title %}Resume Preview | ResumeBuilder{% endblock %}
 
 {% block content %}
-<div class="resume-preview">
-    <div class="resume-header">
-        <div class="meta">
+{% set p = resume.get('personal', {}) %}
+{% set edu = resume.get('education', []) %}
+{% set exp = resume.get('experience', []) %}
+{% set skills = resume.get('skills', []) %}
+{% set soft = resume.get('soft_skills', []) %}
+{% set ach = resume.get('achievements', []) %}
+{% set pubs = resume.get('publications', []) %}
+{% set speaking = resume.get('speaking', []) %}
+{% set langs = resume.get('languages', []) %}
+{% set pd = resume.get('personal_details', {}) %}
+{% set interests = resume.get('interests', []) %}
+{% set refs = resume.get('references', []) %}
+{% set extra = resume.get('extracurricular', []) %}
+{% set courses = resume.get('courses', []) %}
+
+<div class="resume-sheet" style="max-width:760px;margin:0 auto;">
+    <!-- HEADER -->
+    <div class="rp-header">
+        <div class="rp-header-content">
             <div>
-                <h2 class="resume-name">{{ name or 'Your Name' }}</h2>
-                <p class="resume-summary">A short professional summary goes here. You can edit this in the form to the left.</p>
+                <div class="rp-name">{{ p.get('name') or 'Your Name' }}</div>
+                <p class="rp-summary">{{ p.get('summary') or '' }}</p>
             </div>
-            <div class="avatar" aria-hidden="true">
-                <!-- placeholder circle; use <img> if you add avatar upload -->
-            </div>
+            {% if p.get('photo') %}
+            <div class="rp-avatar"><img src="/photos/{{ p.photo }}" alt="avatar"></div>
+            {% else %}
+            <div class="rp-avatar"><span class="rp-avatar-icon">👤</span></div>
+            {% endif %}
         </div>
     </div>
 
-    <div class="contact-bar">
-        <div class="contact-item">✉️ {{ email or 'email@example.com' }}</div>
-        <div class="contact-item">📍 City, Country</div>
-        <div class="contact-item">🔗 portfolio.example.com</div>
+    <!-- CONTACT BAR -->
+    <div class="rp-contact-bar">
+        {% if p.get('email') %}<div class="rp-contact-item"><span class="ci-icon">✉</span>{{ p.email }}</div>{% endif %}
+        {% if p.get('phone') %}<div class="rp-contact-item"><span class="ci-icon">📱</span>{{ p.phone }}</div>{% endif %}
+        {% if p.get('location') %}<div class="rp-contact-item"><span class="ci-icon">📍</span>{{ p.location }}</div>{% endif %}
+        {% if p.get('linkedin') %}<div class="rp-contact-item"><span class="ci-icon">in</span>{{ p.linkedin }}</div>{% endif %}
+        {% if p.get('github') %}<div class="rp-contact-item"><span class="ci-icon">⌥</span>{{ p.github }}</div>{% endif %}
+        {% if p.get('website') %}<div class="rp-contact-item"><span class="ci-icon">🔗</span>{{ p.website }}</div>{% endif %}
     </div>
 
-    <div class="resume-body">
-        <div class="col-left">
-            <div class="section">
-                <h3>Education</h3>
-                <div>
-                    <div class="item-title">B.Sc in Computer Science</div>
-                    <div class="muted">University Name — 2020 - 2024</div>
-                    <p>Short description of notable achievements or final project.</p>
-                </div>
-            </div>
+    <!-- BODY -->
+    <div class="rp-body">
+        <!-- LEFT COLUMN -->
+        <div class="rp-col-left">
 
-            <div class="section">
-                <h3>Work experience</h3>
-                <div>
-                    <div class="item-title">Sr. Sales & IT Executive — TCL Global</div>
-                    <div class="muted">02/2025 - Present</div>
-                    <p>Describe responsibilities and accomplishments here.</p>
+            {% if edu %}
+            <div class="rp-section">
+                <div class="rp-section-title">Education</div>
+                {% for e in edu %}
+                <div class="rp-entry">
+                    <div class="rp-item-title">{{ e.get('degree','') }}</div>
+                    <div class="rp-item-org">{{ e.get('institution','') }}</div>
+                    <div class="rp-item-meta">
+                        <span class="rp-item-period">{{ e.get('period','') }}</span>
+                        {% if e.get('cgpa') %}<span class="rp-cgpa">{{ e.cgpa }}</span>{% endif %}
+                    </div>
+                    {% if e.get('project_label') %}<div class="rp-item-label">{{ e.project_label }}</div>{% endif %}
+                    {% if e.get('bullets') %}
+                    <ul class="rp-bullets">{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul>
+                    {% endif %}
                 </div>
+                {% endfor %}
             </div>
+            {% endif %}
+
+            {% if exp %}
+            <div class="rp-section">
+                <div class="rp-section-title">Work Experience</div>
+                {% for e in exp %}
+                <div class="rp-entry">
+                    <div class="rp-item-title">{{ e.get('title','') }}</div>
+                    <div class="rp-item-org">{{ e.get('company','') }}</div>
+                    <div class="rp-item-period">{{ e.get('period','') }}</div>
+                    {% if e.get('department') %}<div class="rp-item-dept">{{ e.department }}</div>{% endif %}
+                    {% if e.get('bullets') %}
+                    <ul class="rp-bullets">{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if extra %}
+            <div class="rp-section">
+                <div class="rp-section-title">Extracurricular Activities</div>
+                {% for e in extra %}
+                <div class="rp-entry">
+                    <div class="rp-item-title">{{ e.get('title','') }}</div>
+                    <div class="rp-item-org">{{ e.get('org','') }}</div>
+                    {% if e.get('period') %}<div class="rp-item-period">{{ e.period }}</div>{% endif %}
+                    {% if e.get('tag') %}<div class="rp-item-label">{{ e.tag }}</div>{% endif %}
+                    {% if e.get('bullets') %}
+                    <ul class="rp-bullets">{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if courses %}
+            <div class="rp-section">
+                <div class="rp-section-title">Course</div>
+                {% for c in courses %}
+                <div class="rp-entry">
+                    <div class="rp-item-title">{{ c.get('title','') }}</div>
+                    <div class="rp-item-dept">{{ c.get('provider','') }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if refs %}
+            <div class="rp-section">
+                <div class="rp-section-title">References</div>
+                {% for r in refs %}
+                <div class="rp-entry">
+                    <div class="rp-ref-name">{{ r.get('name','') }}</div>
+                    {% if r.get('contact') %}<div class="rp-ref-contact">Contact: {{ r.contact }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
         </div>
 
-        <aside class="col-right">
-            <div class="section">
-                <h3>Skills Inventory</h3>
-                <ul>
-                    <li>Python, JavaScript, SQL</li>
-                    <li>HTML, CSS, Responsive Design</li>
-                    <li>Git, Linux</li>
-                </ul>
-            </div>
+        <!-- RIGHT COLUMN -->
+        <div class="rp-col-right">
 
-            <div class="section">
-                <h3>Soft Skills</h3>
-                <p>Communication, Teamwork, Problem Solving</p>
+            {% if skills %}
+            <div class="rp-section">
+                <div class="rp-section-title">Skills Inventory</div>
+                {% for s in skills %}
+                <div class="rp-skill-entry">
+                    {% if s.get('category') %}<span class="rp-skill-cat">{{ s.category }}:</span>{% endif %}
+                    <span class="rp-skill-items"> {{ s.get('items','') }}</span>
+                </div>
+                {% endfor %}
             </div>
-        </aside>
+            {% endif %}
+
+            {% if soft %}
+            <div class="rp-section">
+                <div class="rp-section-title">Soft Skills</div>
+                <div class="rp-tags">{% for t in soft %}<span class="rp-tag">{{ t }}</span>{% endfor %}</div>
+            </div>
+            {% endif %}
+
+            {% if ach %}
+            <div class="rp-section">
+                <div class="rp-section-title">Achievements &amp; Awards</div>
+                {% for a in ach %}
+                <div class="rp-entry">
+                    <div class="rp-item-title">{{ a.get('title','') }}</div>
+                    {% if a.get('subtitle') %}<div class="rp-pub-sub">{{ a.subtitle }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if pubs %}
+            <div class="rp-section">
+                <div class="rp-section-title">Publications</div>
+                {% for pub in pubs %}
+                <div class="rp-entry">
+                    {% if pub.get('url') %}<div class="rp-pub-url">{{ pub.url }}</div>{% endif %}
+                    <div class="rp-pub-title">{{ pub.get('title','') }}</div>
+                    {% if pub.get('subtitle') %}<div class="rp-pub-sub">{{ pub.subtitle }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if speaking %}
+            <div class="rp-section">
+                <div class="rp-section-title">Speaking &amp; Workshops</div>
+                {% for s in speaking %}
+                <div class="rp-entry">
+                    <div class="rp-item-title">{{ s.get('title','') }}</div>
+                    {% if s.get('bullets') %}
+                    <ul class="rp-bullets">{% for b in s.bullets %}<li>{{ b }}</li>{% endfor %}</ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if langs %}
+            <div class="rp-section">
+                <div class="rp-section-title">Languages</div>
+                <div class="rp-lang-grid">
+                {% for l in langs %}
+                    <div>
+                        <div class="rp-lang-name">{{ l.get('language','') }}</div>
+                        <div class="rp-lang-level">{{ l.get('level','') }}</div>
+                    </div>
+                {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if pd.get('dob') or pd.get('nationality') or pd.get('marital_status') %}
+            <div class="rp-section">
+                <div class="rp-section-title">Personal Details:</div>
+                {% if pd.get('dob') %}<div class="rp-personal-detail">Date of Birth: {{ pd.dob }}</div>{% endif %}
+                {% if pd.get('nationality') %}<div class="rp-personal-detail">Nationality: {{ pd.nationality }}</div>{% endif %}
+                {% if pd.get('marital_status') %}<div class="rp-personal-detail">Marital Status: {{ pd.marital_status }}</div>{% endif %}
+            </div>
+            {% endif %}
+
+            {% if interests %}
+            <div class="rp-section">
+                <div class="rp-section-title">Interests</div>
+                <div class="rp-tags">{% for i in interests %}<span class="rp-tag">{{ i }}</span>{% endfor %}</div>
+            </div>
+            {% endif %}
+
+        </div>
     </div>
 
-    <div style="padding:18px;border-top:1px solid #eef4f6; display:flex;gap:12px;align-items:center">
-        <form method="post" action="/resume/pdf">
-            <input type="hidden" name="name" value="{{ name }}">
-            <input type="hidden" name="email" value="{{ email }}">
-            <button type="submit">Download PDF</button>
-        </form>
-
-        <a href="/">← Edit</a>
-    </div>
+    <div class="rp-footer">Page 1 of 1</div>
 </div>
-
 {% endblock %}
