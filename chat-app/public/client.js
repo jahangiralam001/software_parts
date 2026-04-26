@@ -889,9 +889,12 @@ const localVideo        = document.getElementById('localVideo');
 const videoCallDurEl    = document.getElementById('videoCallDuration');
 const videoMuteAudioBtn = document.getElementById('videoMuteAudioBtn');
 const videoMuteVideoBtn = document.getElementById('videoMuteVideoBtn');
+const switchCameraBtn   = document.getElementById('switchCameraBtn');
 const videoEndCallBtn   = document.getElementById('videoEndCallBtn');
 
 const cancelCallBtn     = document.getElementById('cancelCallBtn');
+
+let preferredFacingMode = 'user';
 
 if (relayVideoImg) {
     // If a relay JPEG cannot decode, immediately fall back to WebRTC video layer.
@@ -952,7 +955,9 @@ async function createPeerConnection() {
         const s = peerConnection.connectionState;
         if (s === 'connected') {
             if (disconnectTimer) { clearTimeout(disconnectTimer); disconnectTimer = null; }
+            if (callType === 'video') setCallModeBadge('Waiting for video...');
         } else if (s === 'disconnected') {
+            setCallModeBadge('Reconnecting...');
             disconnectTimer = setTimeout(() => {
                 if (peerConnection && peerConnection.connectionState === 'disconnected') {
                     // Still disconnected after 8s — switch to relay then
@@ -962,6 +967,7 @@ async function createPeerConnection() {
             }, 8000);
         } else if (s === 'failed') {
             if (disconnectTimer) { clearTimeout(disconnectTimer); disconnectTimer = null; }
+            setCallModeBadge('Switching to relay...');
             // ICE failed — try our Socket.IO relay instead of ending the call
             if (!callRelayMode && callState !== 'idle') {
                 startRelayMode();
@@ -995,7 +1001,14 @@ videoCallBtn.addEventListener('click', () => {
 async function startCall(type) {
     callType = type;
     const constraints = type === 'video'
-        ? { audio: true, video: { width: 640, height: 480 } }
+        ? {
+            audio: true,
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: { ideal: preferredFacingMode },
+            },
+        }
         : { audio: true };
 
     try {
@@ -1035,11 +1048,21 @@ videoMuteAudioBtn.addEventListener('click', toggleMute);
 videoMuteVideoBtn.addEventListener('click', toggleCamera);
 videoEndCallBtn.addEventListener('click',  () => endCall(true));
 cancelCallBtn.addEventListener('click',    () => endCall(true));
+if (switchCameraBtn) {
+    switchCameraBtn.addEventListener('click', switchCameraFacing);
+}
 
 async function acceptCall() {
     callType = pendingCallType;
     const constraints = callType === 'video'
-        ? { audio: true, video: { width: 640, height: 480 } }
+        ? {
+            audio: true,
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: { ideal: preferredFacingMode },
+            },
+        }
         : { audio: true };
 
     try {
@@ -1149,6 +1172,46 @@ function toggleCamera() {
     videoMuteVideoBtn.classList.toggle('camera-off', isCameraOff);
 }
 
+async function switchCameraFacing() {
+    if (!localStream || callType !== 'video') return;
+
+    preferredFacingMode = preferredFacingMode === 'user' ? 'environment' : 'user';
+
+    try {
+        const switched = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: { ideal: preferredFacingMode },
+            },
+        });
+
+        const newTrack = switched.getVideoTracks()[0];
+        if (!newTrack) return;
+
+        const oldTrack = localStream.getVideoTracks()[0];
+        if (oldTrack) {
+            localStream.removeTrack(oldTrack);
+            oldTrack.stop();
+        }
+
+        localStream.addTrack(newTrack);
+
+        if (peerConnection) {
+            const sender = peerConnection.getSenders().find((s) => s.track && s.track.kind === 'video');
+            if (sender) {
+                await sender.replaceTrack(newTrack);
+            }
+        }
+
+        localVideo.srcObject = localStream;
+        localVideo.play().catch(() => {});
+    } catch (e) {
+        console.warn('Camera switch failed:', e);
+    }
+}
+
 // ── Timer ─────────────────────────────────────────────────────────
 function startCallTimer() {
     callSeconds = 0;
@@ -1185,7 +1248,7 @@ function showConnectedUI() {
         localVideo.srcObject = localStream;
         videoCallOverlay.classList.remove('hidden');
         videoCallBtn.classList.add('in-call');
-        setCallModeBadge('Connecting...');
+        setCallModeBadge('Waiting for video...');
         requestAnimationFrame(() => {
             localVideo.play().catch(e => console.warn('Local video play:', e));
             if (remoteVideo.srcObject) {
@@ -1358,10 +1421,17 @@ socket.on('relay-audio', (pcmBuffer) => {
 
 socket.on('relay-video', (jpeg) => {
     if (callState === 'idle') return;
-    if (!callRelayMode) return;
     if (!relayVideoImg || typeof jpeg !== 'string') return;
     // Ignore malformed frames so we don't switch to a broken image on mobile.
     if (!jpeg.startsWith('data:image/jpeg') || jpeg.length < 128) return;
+
+    // Prefer direct WebRTC video when already live.
+    if (!callRelayMode && remoteVideo && remoteVideo.srcObject) {
+        const hasLiveDirectVideo = remoteVideo.srcObject
+            .getVideoTracks()
+            .some((track) => track.readyState === 'live');
+        if (hasLiveDirectVideo) return;
+    }
 
     relayVideoImg.src = jpeg;
     relayVideoImg.classList.remove('hidden');

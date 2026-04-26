@@ -1012,6 +1012,7 @@ body {
 .relay-video-img {
     object-fit: cover;
     background: #1a1a2e;
+    transform: scaleX(-1);
 }
 
 /* Relay badge — tells user when server is relaying the call */
@@ -1042,6 +1043,7 @@ body {
     height: 100%;
     object-fit: cover;
     background: #1a1a2e;
+    transform: scaleX(-1);
 }
 
 .local-video {
