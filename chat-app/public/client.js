@@ -926,6 +926,31 @@ function getPreferredVideoConstraints() {
     };
 }
 
+function applyLocalPreviewVisuals() {
+    if (!localVideo) return;
+    localVideo.classList.toggle('preview-landscape', isLandscapeViewport());
+    // Mirror only front-camera self preview. Outgoing track is unaffected.
+    localVideo.classList.toggle('preview-mirrored', preferredFacingMode === 'user');
+}
+
+function getRelayFrameSize() {
+    const srcW = relayCapVideo?.videoWidth || 640;
+    const srcH = relayCapVideo?.videoHeight || 480;
+    const maxEdge = 320;
+    let w;
+    let h;
+
+    if (srcW >= srcH) {
+        w = maxEdge;
+        h = Math.max(180, Math.round((srcH / srcW) * maxEdge));
+    } else {
+        h = maxEdge;
+        w = Math.max(180, Math.round((srcW / srcH) * maxEdge));
+    }
+
+    return { w, h };
+}
+
 async function replaceLocalVideoTrack(newTrack) {
     if (!newTrack || !localStream) return;
 
@@ -948,6 +973,7 @@ async function replaceLocalVideoTrack(newTrack) {
 
     if (localVideo) {
         localVideo.srcObject = localStream;
+        applyLocalPreviewVisuals();
         localVideo.play().catch(() => {});
     }
 
@@ -977,6 +1003,7 @@ async function refreshLocalVideoTrackForOrientation() {
 function onDeviceOrientationChange() {
     if (orientationChangeTimer) clearTimeout(orientationChangeTimer);
     orientationChangeTimer = setTimeout(() => {
+        applyLocalPreviewVisuals();
         refreshLocalVideoTrackForOrientation().catch((e) => {
             console.warn('Orientation refresh failed:', e);
         });
@@ -1105,6 +1132,7 @@ async function startCall(type) {
     if (type === 'video') {
         // Pre-attach local stream so it's ready when the screen transitions
         localVideo.srcObject = localStream;
+        applyLocalPreviewVisuals();
         videoCallBtn.classList.add('in-call');
     } else {
         callBtn.classList.add('in-call');
@@ -1245,6 +1273,7 @@ async function switchCameraFacing() {
     if (!localStream || callType !== 'video') return;
 
     preferredFacingMode = preferredFacingMode === 'user' ? 'environment' : 'user';
+    applyLocalPreviewVisuals();
 
     try {
         const switched = await navigator.mediaDevices.getUserMedia({
@@ -1295,6 +1324,7 @@ function showConnectedUI() {
         relayFrameReceived = false;
 
         localVideo.srcObject = localStream;
+        applyLocalPreviewVisuals();
         videoCallOverlay.classList.remove('hidden');
         videoCallBtn.classList.add('in-call');
         setCallModeBadge('Waiting for video...');
@@ -1388,7 +1418,6 @@ async function startRelayMode() {
     if (callType === 'video' && localStream && localStream.getVideoTracks().length) {
         try {
             relayCanvas = document.createElement('canvas');
-            relayCanvas.width = 320; relayCanvas.height = 240;
             const ctx2d = relayCanvas.getContext('2d');
 
             // Hidden video element feeds local webcam frames into the canvas
@@ -1401,7 +1430,12 @@ async function startRelayMode() {
             relayVideoTimer = setInterval(() => {
                 if (!callRelayMode || !relayCapVideo) return;
                 try {
-                    ctx2d.drawImage(relayCapVideo, 0, 0, 320, 240);
+                    const { w, h } = getRelayFrameSize();
+                    if (relayCanvas.width !== w || relayCanvas.height !== h) {
+                        relayCanvas.width = w;
+                        relayCanvas.height = h;
+                    }
+                    ctx2d.drawImage(relayCapVideo, 0, 0, relayCanvas.width, relayCanvas.height);
                     const jpeg = relayCanvas.toDataURL('image/jpeg', 0.5);
                     socket.emit('relay-video', jpeg);
                 } catch (_) {}

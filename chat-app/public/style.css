@@ -497,6 +497,11 @@ body {
         right: 10px;
     }
 
+    .local-video.preview-landscape {
+        width: 120px;
+        height: 90px;
+    }
+
     /* Duration badge — clear of notch */
     .vc-duration-badge {
         top: max(12px, env(safe-area-inset-top, 12px));
@@ -1055,8 +1060,17 @@ body {
     border: 2px solid rgba(255, 255, 255, 0.25);
     background: #222;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    transform: scaleX(-1);
+    transform: none;
     transform-origin: center center;
+}
+
+.local-video.preview-mirrored {
+    transform: scaleX(-1);
+}
+
+.local-video.preview-landscape {
+    width: 150px;
+    height: 110px;
 }
 
 .vc-duration-badge {
