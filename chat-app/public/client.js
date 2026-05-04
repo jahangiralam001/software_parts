@@ -1064,6 +1064,18 @@ async function createPeerConnection() {
             remoteVideo.muted = true;
             remoteVideo.play().catch(e => console.warn('Remote video play:', e));
             setCallModeBadge('Direct video');
+
+            // Detect aspect ratio once stream metadata is available and
+            // switch object-fit dynamically so the frame is never over-cropped.
+            remoteVideo.onloadedmetadata = () => {
+                const { videoWidth: vw, videoHeight: vh } = remoteVideo;
+                if (!vw || !vh) return;
+                const isLandscape = vw > vh;
+                // Landscape (16:9 camera) in a portrait container → contain to avoid zoom
+                // Portrait (selfie-cam, vertical) in portrait container → cover to fill
+                remoteVideo.style.objectFit = isLandscape ? 'contain' : 'cover';
+                console.info(`Remote stream ${vw}×${vh} → object-fit: ${remoteVideo.style.objectFit}`);
+            };
         }
     };
 
