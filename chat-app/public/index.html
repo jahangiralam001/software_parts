@@ -113,7 +113,9 @@
 
             <!-- Video Call Overlay -->
             <div id="videoCallOverlay" class="video-call-overlay hidden">
-                <!-- WebRTC remote video (used when P2P works) -->
+                <!-- Blurred background: same stream, cover + blur to fill any letterbox bars -->
+                <video id="remoteBg" class="remote-video-bg" autoplay playsinline muted></video>
+                <!-- WebRTC remote video (used when P2P works) — contain to avoid zoom -->
                 <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
                 <!-- Relay fallback: JPEG frames sent through our Socket.IO server -->
                 <img id="relayVideoImg" class="remote-video relay-video-img hidden" alt="">

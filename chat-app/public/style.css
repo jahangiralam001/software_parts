@@ -1040,13 +1040,29 @@ body {
 }
 
 
+/* Blurred background layer: same remote stream, cover+blur fills letterbox bars.
+   Sits behind the main video (z-index lower). */
+.remote-video-bg {
+    position: absolute;
+    inset: -20px;            /* slightly oversize to hide blur edge fade */
+    width: calc(100% + 40px);
+    height: calc(100% + 40px);
+    object-fit: cover;
+    filter: blur(18px) brightness(0.55) saturate(1.2);
+    transform: scale(1.05);  /* extra stretch to cover blurred edges */
+    z-index: 0;
+}
+
+/* Main remote video: contain shows full frame without any zoom.
+   The blurred bg behind it fills the bars, so it never looks empty. */
 .remote-video {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;   /* fill edge-to-edge — standard video call UX */
-    background: #000;
+    object-fit: contain;
+    background: transparent;  /* blurred bg shows through */
+    z-index: 1;
 }
 
 .local-video {

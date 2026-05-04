@@ -887,6 +887,7 @@ const incomingTypeLabel   = document.getElementById('incomingTypeLabel');
 const videoCallOverlay  = document.getElementById('videoCallOverlay');
 const callingOverlay    = document.getElementById('callingOverlay');
 const remoteVideo       = document.getElementById('remoteVideo');
+const remoteBg          = document.getElementById('remoteBg');   // blurred background layer
 const relayVideoImg     = document.getElementById('relayVideoImg');
 const relayBadge        = document.getElementById('relayBadge');
 const callModeBadge     = document.getElementById('callModeBadge');
@@ -1055,6 +1056,8 @@ async function createPeerConnection() {
             } else {
                 localVideo.srcObject = videoStream; // already swapped — put remote in PiP
             }
+            // Blurred background always shows the remote stream
+            if (remoteBg) { remoteBg.srcObject = videoStream; remoteBg.play().catch(() => {}); }
             remoteVideo.style.display = '';
             if (relayVideoImg) {
                 relayVideoImg.classList.add('hidden');
@@ -1226,6 +1229,7 @@ function endCall(notifyPeer = true) {
     if (localStream)    { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
     if (remoteAudio.srcObject) remoteAudio.srcObject = null;
     if (remoteVideo.srcObject) { remoteVideo.srcObject = null; remoteVideo.muted = false; }
+    if (remoteBg && remoteBg.srcObject) remoteBg.srcObject = null;
     if (localVideo.srcObject)  localVideo.srcObject  = null;
 
     if (disconnectTimer) { clearTimeout(disconnectTimer); disconnectTimer = null; }
