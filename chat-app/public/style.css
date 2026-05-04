@@ -1061,12 +1061,10 @@ body {
     background: #222;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     transform-origin: center center;
-    /* Draggable PiP */
-    cursor: grab;
-    touch-action: none;     /* prevent scroll hijack on touch */
-    user-select: none;
-    z-index: 10;            /* above remote video */
-    will-change: top, left;
+    z-index: 10;
+    /* The pip.js handle div sits on top and captures all drag/tap events.
+       pointer-events:none here prevents the video from intercepting touches. */
+    pointer-events: none;
 }
 
 .local-video.preview-mirrored {
