@@ -866,6 +866,10 @@ let relayCanvas      = null;   // off-screen canvas for JPEG encoding
 let relayRxSampleRate = 44100; // receiver's sample rate (sent by sender in relay-start)
 let relayFrameReceived = false; // switch UI only after first valid relay frame
 
+// ── PiP state ────────────────────────────────────────────────────────────────────────────
+let remoteVideoStream = null;  // separate ref so swap() can restore it
+let pipSwapped        = false; // has the user tapped to swap main ↔ PiP?
+
 // DOM — audio bar
 const callBtn             = document.getElementById('callBtn');
 const videoCallBtn        = document.getElementById('videoCallBtn');
@@ -896,6 +900,10 @@ const videoEndCallBtn   = document.getElementById('videoEndCallBtn');
 const cancelCallBtn     = document.getElementById('cancelCallBtn');
 
 let preferredFacingMode = 'user';
+
+// ── Draggable PiP controller (initialised after DOM refs are set) ────────────────
+// swapVideos() is defined below showConnectedUI so we defer init.
+let pip; // set once the DOM is ready (a few lines down)
 
 if (relayVideoImg) {
     // If a relay JPEG cannot decode, immediately fall back to WebRTC video layer.
@@ -1041,7 +1049,12 @@ async function createPeerConnection() {
         } else if (track.kind === 'video' && callType === 'video') {
             // Route video track to <video> element (muted — audio is handled above)
             const videoStream = incomingStream || new MediaStream([track]);
-            remoteVideo.srcObject = videoStream;
+            remoteVideoStream = videoStream; // keep a separate ref for PiP swap
+            if (!pipSwapped) {
+                remoteVideo.srcObject = videoStream;
+            } else {
+                localVideo.srcObject = videoStream; // already swapped — put remote in PiP
+            }
             remoteVideo.style.display = '';
             if (relayVideoImg) {
                 relayVideoImg.classList.add('hidden');
@@ -1216,6 +1229,9 @@ function endCall(notifyPeer = true) {
     isMuted = false; isCameraOff = false;
     amICaller = false;
     callState = 'idle'; callType = 'audio';
+    // Reset PiP state so next call starts in default layout
+    remoteVideoStream = null;
+    pipSwapped        = false;
 
     stopCallTimer();
     callingOverlay.classList.add('hidden');
@@ -1333,6 +1349,8 @@ function showConnectedUI() {
             if (remoteVideo.srcObject) {
                 remoteVideo.play().catch(e => console.warn('Remote video play:', e));
             }
+            // Position PiP in bottom-right corner and arm drag logic
+            if (pip) pip.reset();
         });
     } else {
         activeCallBar.classList.remove('hidden');
@@ -1341,6 +1359,34 @@ function showConnectedUI() {
     }
     startCallTimer();
 }
+
+// ── PiP swap (tap on PiP toggles main ↔ small view) ────────────────────────
+// Audio is NOT touched: remoteAudio handles remote audio, local is muted everywhere.
+function swapVideos() {
+    if (callRelayMode) return; // relay mode uses img, skip
+    pipSwapped = !pipSwapped;
+    if (pipSwapped) {
+        // Remote stream moves to PiP, local stream goes full-screen
+        localVideo.srcObject  = remoteVideoStream;
+        remoteVideo.srcObject = localStream;
+    } else {
+        // Restore normal layout
+        localVideo.srcObject  = localStream;
+        remoteVideo.srcObject = remoteVideoStream;
+    }
+    // Both elements always stay muted (audio handled separately)
+    localVideo.muted  = true;
+    remoteVideo.muted = true;
+    localVideo.play().catch(() => {});
+    remoteVideo.play().catch(() => {});
+}
+
+// Initialise draggable PiP once DOM refs are all in scope
+pip = useDraggablePiP(localVideo, videoCallOverlay, {
+    onSwap:       swapVideos,
+    margin:       12,
+    bottomMargin: 88, // stay above call controls
+});
 
 // ── Socket Handlers ────────────────────────────────────────────────
 socket.on('call-offer', ({ offer, callType: incomingType }) => {
